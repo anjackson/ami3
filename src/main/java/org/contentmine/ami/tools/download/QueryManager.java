@@ -21,13 +21,17 @@ import org.contentmine.graphics.html.util.HtmlUtil;
 
 import nu.xom.Element;
 
-/** downloads the immediate results of a search to a ResultSet
+/** downloads the immediate results of a search to a HitList
  * 
  * @author pm286
  *
  */
 public class QueryManager extends AbstractSubDownloader {
 
+	public enum QuerySyntax {
+		CSH,
+		AMP_PLUS,
+	}
 
 private static final Logger LOG = Logger.getLogger(QueryManager.class);
 	static {
@@ -46,7 +50,7 @@ private static final Logger LOG = Logger.getLogger(QueryManager.class);
 	 * @return 
 	 * 
 	 */
-	public List<String> searchAndDownloadResultSet() {
+	public List<String> searchAndDownloadHitList() {
 	/**
 	https://www.biorxiv.org/search/coronavirus%20numresults%3A75%20sort%3Arelevance-rank?page=1
 	 * @throws IOException 
@@ -63,22 +67,50 @@ private static final Logger LOG = Logger.getLogger(QueryManager.class);
 			System.out.println("No pages required");
 			return new ArrayList<>();
 		}
+		int pagesize = abstractDownloader.getDownloadTool().getPageSize();
+		int downloadLimit = abstractDownloader.getDownloadTool().getDownloadLimit();
 		downloadCount = 0;
-		for (Integer page = pageList.get(0); page <= pageList.get(1); page++) {
+		Integer page0 = pageList.get(0);
+		int totalHits = 0;
+		HitList lastHitList = null;
+		HitList firstHitList = null;
+		for (Integer page = page0; page <= pageList.get(1); page++) {
+			
 			try {
-				searchAndDownloadMetadataResultSet(url, page);
+				hitList = searchAndDownloadMetadataHitList(url, page);
+				int size = hitList.size();
+				totalHits += size;
 			} catch (IOException e) {
 				LOG.error("Could not download hitpages: " + page, e);
 				continue;
 			}
+			if (hitList.size() < pagesize) {
+				System.out.println("page hits (" + hitList.size() + ") less than page size (" + pagesize + ") ; assumed termination");
+				break;
+				
+			}
+			if (totalHits >= downloadLimit) {
+				System.out.println("total hits (" + totalHits + ") exceeds limit (" + downloadLimit + ")");
+				break;
+			}
+			if (hitList.equals(lastHitList)) {
+				System.out.println("repeated hitList (== previous), break");
+				break;
+			}
+			if (hitList.equals(firstHitList)) {
+				System.out.println("repeated hitList (== first), break");
+				break;
+			}
+			lastHitList = hitList;
+			if (firstHitList == null) firstHitList = hitList;
 		}
 		// clean the files
-		List<Path> resultSetCleanPaths = this.getResultSetCleanFiles(metadataDir.toString());
-		List<String> resultSetList = new ArrayList<>();
-		for (Path path : resultSetCleanPaths) {
-			resultSetList.add(path.toFile().toString());
+		List<Path> hitListCleanPaths = this.getHitListCleanFiles(metadataDir.toString());
+		List<String> hitListList = new ArrayList<>();
+		for (Path path : hitListCleanPaths) {
+			hitListList.add(path.toFile().toString());
 		}
-		return resultSetList;
+		return hitListList;
 
 		
 	}
@@ -94,20 +126,53 @@ private static final Logger LOG = Logger.getLogger(QueryManager.class);
 	 */
 	private String createQuery(List<String> queryList) {
 		String s = "";
+		QuerySyntax querySyntax = abstractDownloader.getQuerySyntax();
 		if (queryList != null) {
-			// originally a plus but will be encoded further
-			s = String.join("%2B", queryList);
-			s = addParameter("sort", sortOrder , s);
-			s = addParameter("numresults", String.valueOf(downloadTool.getPageSize()), s);
-			try {
-//				s = URLEncoder.encode(s, NAConstants.UTF_8);  / adds "+" instead of "%20"
-				s = AbstractDownloader.simpleEncode(s);
-			} catch (Exception e) {
-				throw new RuntimeException("cannot encode: ", e);
+			if (QuerySyntax.CSH.equals(querySyntax)) {
+				s = createUUEQuery(queryList);
+			} else if (QuerySyntax.AMP_PLUS.equals(querySyntax)) {
+				s = createAMPPlusQuery(queryList);
+			} else {
+				throw new RuntimeException("Bad querySyntax: "+querySyntax);
 			}
 		}
 		System.out.println("Query: "+s);
 		return s;
+	}
+
+	private String createUUEQuery(List<String> queryList) {
+		String s = "";
+		// originally a plus but will be encoded further
+		s = String.join("%2B", queryList);
+		s = addParameter("sort", sortOrder , s);
+		s = addParameter("numresults", String.valueOf(downloadTool.getPageSize()), s);
+		try {
+//				s = URLEncoder.encode(s, NAConstants.UTF_8);  / adds "+" instead of "%20"
+			s = AbstractDownloader.simpleEncode(s);
+		} catch (Exception e) {
+			throw new RuntimeException("cannot encode: ", e);
+		}
+		return s;
+	}
+
+	private String createAMPPlusQuery(List<String> queryList) {
+		String s = "q=";
+		// originally a plus but will be encoded further
+		s += String.join("+", queryList);
+//		s = addParameter("sort", sortOrder , s);
+//		s = addParameter("numresults", String.valueOf(downloadTool.getPageSize()), s);
+		try {
+			s = spaceToPlus(s);
+//			s = URLEncoder.encode(s, NAConstants.UTF_8);  // adds "+" instead of "%20"
+//			s = AbstractDownloader.simpleEncode(s);
+		} catch (Exception e) {
+			throw new RuntimeException("cannot encode: ", e);
+		}
+		return s;
+	}
+
+	private String spaceToPlus(String s) {
+		return s.replaceAll(" ", "+");
 	}
 
 	private String addParameter(String name, String value, String s) {
@@ -115,76 +180,90 @@ private static final Logger LOG = Logger.getLogger(QueryManager.class);
 		return s;
 	}
 		
-	/** creates target/biorxiv/testsearch3/__metadata/resultSet1.html, etc. for each "page"
+	/** creates target/biorxiv/testsearch3/__metadata/hitList1.html, etc. for each "page"
 	 * 
+	 * NOTE: BIORXIV COUNTS FROM ZERO!
+	 * in common with most biblio we count from ONE
 	 * 
 	 * @param url
 	 * @param page
+	 * @return empty hitlist if no hits
 	 * @throws IOException
 	 */
-	private void searchAndDownloadMetadataResultSet(String url, Integer page) throws IOException {
-		File resultSetFile = new File(metadataDir, RESULT_SET + page + "." + "html");
-		System.out.println("runing curl :" + url + " to " + resultSetFile);
+	private HitList searchAndDownloadMetadataHitList(String url, Integer page) throws IOException {
+		File hitListFile = new File(metadataDir, HIT_LIST + page + "." + "html");
 		url = addPageNumber(url, page);
+		System.out.println("running curl :" + url + " to " + hitListFile);
 		CurlDownloader curlDownloader = new CurlDownloader()
 				.setUrlString(url)
-				.setOutputFile(resultSetFile);
+				.setOutputFile(hitListFile);
 		curlDownloader.run();
-		File cleanResultSetfile = cleanAndOutputResultSetFile(resultSetFile);
-		if (cleanResultSetfile != null) {
-			String resultSetContent = FileUtils.readFileToString(cleanResultSetfile, CMineUtil.UTF8_CHARSET);
-			resultSet = this.createResultSet1(resultSetContent);
-			resultSet.setUrl(url);
-			System.err.println("Results " + resultSet.size());
+		File cleanHitListfile = cleanAndOutputHitListFile(hitListFile);
+		if (cleanHitListfile != null) {
+			String hitListContent = FileUtils.readFileToString(cleanHitListfile, CMineUtil.UTF8_CHARSET);
+			hitList = this.createHitList1(hitListContent);
+			hitList.setUrl(url);
+			System.err.println("Results " + hitList.size());
 		}
-		return;
+		return hitList == null ? new HitList() : hitList;
 	}
 
 	/**
-	 * called from downloadMetadataResultSet
+	 * called from downloadMetadataHitList
 	 * 
 	 * <ul class="highwire-search-results-list">
 	 <li class="first odd search-result result-jcode-biorxiv search-result-highwire-citation">
 	 * @return 
 	 */
-	private ResultSet createResultSet1(String result) {
+	private HitList createHitList1(String result) {
 		Element element = HtmlUtil.parseCleanlyToXHTML(result);
-		return abstractDownloader.createResultSet(element);
+		return abstractDownloader.createHitList(element);
 	}
 
 	/** adds ?page=n at end
-	 * 
+	 * NOTE BIORXIV count from ZERO, others may count from ONE
 	 * @param url
 	 * @param page
 	 * @return
 	 */
 	private String addPageNumber(String url, Integer page) {
-		return url == null ? null : url + "?page=" + page;
+		String pageNumberString = "";
+		QuerySyntax querySyntax = abstractDownloader.getQuerySyntax();
+		if (url == null) {
+			
+		} else {
+			if (QuerySyntax.CSH.equals(querySyntax)) {
+				pageNumberString = url + "?page=" + abstractDownloader.computePageNumber(page);
+			} else if (QuerySyntax.AMP_PLUS.equals(querySyntax)) {
+				pageNumberString = url + "&page=" + abstractDownloader.computePageNumber(page);
+			}
+		}
+		return pageNumberString;
 	}
 
-	protected File cleanAndOutputResultSetFile(File file) {
+	protected File cleanAndOutputHitListFile(File file) {
 		Element element = HtmlUtil.parseCleanlyToXHTML(file);
 		HtmlHtml htmlHtml = (HtmlHtml) HtmlElement.create(element);
 		HtmlBody body = htmlHtml.getBody();
 		if (body == null) {
-			System.err.println("null body in cleanAndOutputResultSetFile");
+			System.err.println("null body in cleanAndOutputHitListFile");
 			return null;
 		}
 		HtmlElement searchResultsList = cleanAndDetachSearchResults(body);
 		if (searchResultsList == null) {
-			resultSetErrorMessage();
+			hitListErrorMessage();
 			return null;
 		}
 		cleanHtmlRemoveLinkCommentEtc(htmlHtml);
-		replaceBodyChildrenByResultSet(body, searchResultsList);
+		replaceBodyChildrenByHitList(body, searchResultsList);
 		File cleanFile = new File(file.getAbsoluteFile().toString().replace(".html", "." + AbstractSubDownloader.CLEAN + ".html"));
-		System.out.println("wrote resultSet: "+cleanFile);
+		System.out.println("wrote hitList: "+cleanFile);
 		XMLUtil.writeQuietly(htmlHtml, cleanFile, 1);
 		return cleanFile;
 	}
 
-	protected void resultSetErrorMessage() {
-		System.err.println("Cannot write resultSet");
+	protected void hitListErrorMessage() {
+		System.err.println("Cannot write hitList");
 	}
 
 /** called from AMIDownloadTool
@@ -192,7 +271,7 @@ private static final Logger LOG = Logger.getLogger(QueryManager.class);
 	 * 
 	 * @throws IOException
 	 */
-	public List<Path> getResultSetCleanFiles(String metadataDir) {
+	public List<Path> getHitListCleanFiles(String metadataDir) {
 /**
  * @throws IOException 
  */
@@ -200,7 +279,7 @@ private static final Logger LOG = Logger.getLogger(QueryManager.class);
 		List<Path> paths = new ArrayList<>();
 		try {
 			paths = Files.list(p)
-			    .filter(f -> f.toString().matches(".*" + AbstractSubDownloader.RESULT_SET + "\\d+\\." + AbstractSubDownloader.CLEAN + "\\.html"))
+			    .filter(f -> f.toString().matches(".*" + AbstractSubDownloader.HIT_LIST + "\\d+\\." + AbstractSubDownloader.CLEAN + "\\.html"))
 			    .sorted()
 			    .collect(Collectors.toList());
 		} catch (IOException e) {

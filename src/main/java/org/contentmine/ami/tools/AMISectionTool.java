@@ -60,22 +60,19 @@ import picocli.CommandLine.Option;
  *
  */
 @Command(
-name = "ami-section", 
-aliases = "section",
-version = "ami-section 0.1",
-description = "splits XML files into sections using XPath%n"
-		+ "creates names from titles of sections (or 'elem<num>.xml' if cannot)%n"
-		+ "optionally writes HTML (slow) using specified stylesheet%n"
-		+ "examples:%n"
-		+ "    --sections ALL --html nlm2html%n"
-		+ "         //not sure this works"
-		+ "    --sections ABSTRACT ACK_FUND --write false%n"
-		+ "%n"
-		+ "    --forcemake --extract table fig --summary figure table "
-		+ "        // this seems to create sections OK, use this?"
-		
-)
-
+name = "section",
+description = {
+		"Splits XML files into sections using XPath.",
+		"Creates names from titles of sections (or 'elem<num>.xml' if cannot)%n"
+				+ "optionally writes HTML (slow) using specified stylesheet%n"
+				+ "examples:%n"
+				+ "    --sections ALL --html nlm2html%n"
+				+ "         //not sure this works"
+				+ "    --sections ABSTRACT ACK_FUND --write false%n"
+				+ "%n"
+				+ "    --forcemake --extract table fig --summary figure table "
+				+ "        // this seems to create sections OK, use this?"
+})
 public class AMISectionTool extends AbstractAMITool {
 	
 	private static final String SUMMARY_HTML = "summary.html";
@@ -259,7 +256,7 @@ public class AMISectionTool extends AbstractAMITool {
 		processedTree = true;
 		sectionsDir = cTree.getSectionsDirectory();
 		boolean debug = false;
-		if (!CMFileUtil.shouldMake(forceMake, sectionsDir, debug, sectionsDir)) {
+		if (!CMFileUtil.shouldMake(getForceMake(), sectionsDir, debug, sectionsDir)) {
 			if (debug) LOG.debug("skipped: "+sectionsDir);
 			processedTree = false;
 			return processedTree;
@@ -506,14 +503,14 @@ public class AMISectionTool extends AbstractAMITool {
 
 	private void writeSectionComponents(boolean deleteExisting, SectionTag sectionTag) {
 		List<Element> sectionList = tagger.getSections(sectionTag);
-		System.err.println("section: "+sectionTag);
+//		System.err.println("section: "+sectionTag);
 		sectionNumber = new SectionNumber();
 		if (writeFiles && sectionList != null && sectionList.size() > 0) {
-			LOG.debug(sectionTag+": "+sectionList.size());
+//			LOG.debug("tag> "+sectionTag+": "+sectionList.size());
 			File sectionDir = cTree.makeSectionDir(sectionTag.getName(), deleteExisting);
 			for (int serial = 0; serial < sectionList.size(); serial++) {
 				Element section = sectionList.get(serial);
-				LOG.debug("SECT "+section.toXML());
+				System.out.println("SECT "+section.toXML());
 				writeSection(section, sectionDir);
 				sectionNumber.incrementSerial();
 			}

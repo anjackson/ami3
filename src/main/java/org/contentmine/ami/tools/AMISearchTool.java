@@ -9,6 +9,7 @@ import java.util.List;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.ami.AMIProcessor;
+import org.contentmine.ami.plugins.AMISearcher;
 import org.contentmine.ami.plugins.AbstractSearchArgProcessor;
 import org.contentmine.ami.plugins.search.SearchArgProcessor;
 import org.contentmine.ami.plugins.search.SearchPluginOption;
@@ -35,13 +36,11 @@ import picocli.CommandLine.Option;
 //	    AMIRegexTool.class,
 //	    AMIWordsTool.class,
 //	},
-name = "ami-search", 
-aliases = "search",
-version = "ami-search 0.1",
-description = "searches text (and maybe SVG). Has specialist subcommands"
-)
-
-
+name = "search",
+description = {
+		"Searches text (and maybe SVG).",
+		//"Has specialist subcommands"
+})
 public class AMISearchTool extends AbstractAMISearchTool {
 	private static final Logger LOG = Logger.getLogger(AMISearchTool.class);
 	static {
@@ -154,15 +153,15 @@ public class AMISearchTool extends AbstractAMISearchTool {
     @Override
 	protected void parseSpecifics() {
     	super.parseSpecifics();
-		System.out.println("dictionaryList       " + dictionaryList);
-		System.out.println("dictionaryTop        " + dictionaryTopList);
-		System.out.println("dictionarySuffix     " + dictionarySuffix);
-		System.out.println();
+//		System.out.println("dictionaryList       " + dictionaryList);
+//		System.out.println("dictionaryTop        " + dictionaryTopList);
+//		System.out.println("dictionarySuffix     " + dictionarySuffix);
+//		System.out.println();
 	}
 
-    public void createOldStyleCmd() {
-    	// probably taken care of by 
-    }
+//    public void createOldStyleCmd() {
+//    	// probably taken care of by 
+//    }
 //    @Override
 //    protected void runSpecifics() {
 //    	abstractSearchArgProcessor = getOrCreateSearchProcessor();
@@ -193,11 +192,12 @@ public class AMISearchTool extends AbstractAMISearchTool {
 //	}
 
 	protected void populateArgProcessorFromCLI() {
-		abstractSearchArgProcessor.createSearcherList(dictionaryList);
+		List<AMISearcher> amiSearcherList = abstractSearchArgProcessor.createSearcherList(dictionaryList);
+		System.out.println("amiSearchers: "+amiSearcherList);
 	}
 
 	
-//	public AbstractSearchArgProcessor getOrCreateSearchProcessor() {
+//	public AbsectetractSearchArgProcessor getOrCreateSearchProcessor() {
 //		if (searchArgProcessor == null) {
 //			searchArgProcessor = new AbstractSearchArgProcessor(this);
 //		}
@@ -238,7 +238,7 @@ public class AMISearchTool extends AbstractAMISearchTool {
 		/** this uses SearchArgProcessor.runSearch()
 		 * this should be called directly.
 		 */
-		if (verbosity.length > 0) {
+		if (verbosity().length > 0) {
 			LOG.debug("************************* search "+cmd);
 		}
 		runLegacyCommandProcessor(cmd);
@@ -250,6 +250,7 @@ public class AMISearchTool extends AbstractAMISearchTool {
 	}
 
 	protected String buildCommandFromBuiltinsAndFacets() {
+		
 		String cmd = "word(frequencies)xpath:@count>20~w.stopwords:pmcstop.txt_stopwords.txt";
 		String cmd1 = cmd;
 		if (dictionaryList != null) {
@@ -259,11 +260,13 @@ public class AMISearchTool extends AbstractAMISearchTool {
 				} else if (facet.equals("species")) {
 					cmd1 += " species(binomial)";
 				} else {
+					// add names dictionary
 					checkDictionaryExists(facet);
 					cmd1 += " "+AMIProcessor.SEARCH + "("+facet+")";
 				}
 			}
 		}
+		System.out.println("created COMMAND: "+cmd1);
 		return cmd1;
 	}
 

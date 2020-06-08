@@ -39,12 +39,16 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 import com.google.common.collect.Multiset.Entry;
 
+import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 /**
  * 
  * @author pm286
  *
  */
+@Command(name = "table", description = {
+		"Writes cProject or cTree to summary table."
+})
 public class AMITableTool extends AbstractAMITool {
 	private static final Logger LOG = Logger.getLogger(AMITableTool.class);
 
@@ -365,7 +369,7 @@ public class AMITableTool extends AbstractAMITool {
 		if (multisetList != null && multisetList.size() > 0) {
 			createAndOutputMultisets();
 		}
-		XMLUtil.writeQuietly(templateSummaryHtml, new File(cProjectDirectory, "__tables/"+templateName+"."+CTree.HTML), 1);
+		XMLUtil.writeQuietly(templateSummaryHtml, new File(getCProjectDirectory(), "__tables/"+templateName+"."+CTree.HTML), 1);
 		
 	}
 

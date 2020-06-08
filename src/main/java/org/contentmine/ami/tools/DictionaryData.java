@@ -4,10 +4,10 @@ import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.contentmine.ami.tools.AMIDictionaryTool.DictionaryFileFormat;
-import org.contentmine.ami.tools.AMIDictionaryTool.InputFormat;
-import org.contentmine.ami.tools.AMIDictionaryTool.Operation;
-import org.contentmine.ami.tools.AMIDictionaryTool.WikiLink;
+import org.contentmine.ami.tools.AMIDictionaryToolOLD.DictionaryFileFormat;
+import org.contentmine.ami.tools.AMIDictionaryToolOLD.InputFormat;
+import org.contentmine.ami.tools.AMIDictionaryToolOLD.Operation;
+import org.contentmine.ami.tools.AMIDictionaryToolOLD.WikiLink;
 
 class DictionaryData {
 	static final Logger LOG = Logger.getLogger(DictionaryData.class);
@@ -23,13 +23,12 @@ class DictionaryData {
     InputFormat             informat;
     String                  input;
 	String                  linkCol;
-	String[]                log4j;
 	String                  nameCol;
     Operation               operation;
     DictionaryFileFormat[]  outformats;
     String                  splitCol=",";
 	String                  termCol;
-    String[]                terms;
+    List<String>            terms;
 	WikiLink[]              wikiLinks;
 
 }

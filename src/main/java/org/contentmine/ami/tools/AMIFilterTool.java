@@ -44,11 +44,10 @@ import picocli.CommandLine.Option;
 
 
 @Command(
-name = "ami-filter", 
-aliases = "filter",
-version = "ami-filter 0.1",
-description = "	FILTERs images (initally from PDFimages), but does not transform the contents."
-		+ "Might later be extended to other data types."
+name = "filter",
+description = {
+		"FILTERs images (initally from PDFimages), but does not transform the contents.",
+		"Might later be extended to other data types."
 		+ "Works at level of raw *.png. Does not transform or split the png."
 		+ " Services include %n"
 		+ ""
@@ -56,10 +55,7 @@ description = "	FILTERs images (initally from PDFimages), but does not transform
 		+ "%n rejection of images less than gven size</li>"
 		+ "%n rejection of monochrome images (e.g. all white or all black) (NB black and white is 'binary/ized'"
 		+ ""
-		
-		
-)
-
+})
 public class AMIFilterTool extends AbstractAMITool /*implements HasImageDir*/ {
 	private static final String IMAGE = "image";
 
@@ -87,6 +83,7 @@ public class AMIFilterTool extends AbstractAMITool /*implements HasImageDir*/ {
 		_delete,
 		monochrome,
 		;
+		
 	}
 	
 	public enum SmallDest implements AbstractDest {
@@ -162,11 +159,11 @@ public class AMIFilterTool extends AbstractAMITool /*implements HasImageDir*/ {
 
     // FILTER OPTIONS
 
-    @Option(names = {"--duplicate"},
+    @Option(names = {"-d", "--duplicate"},
     		arity = "0..1",
-    		defaultValue = "duplicate",
-            description = "FILTER: move duplicate images to <duplicate>; default = ${DEFAULT-VALUE}; "+_DELETE+" means delete")
-	private DuplicateDest duplicateDirname = DuplicateDest.duplicate;
+    		fallbackValue = "duplicate",
+            description = "FILTER: move duplicate images to <duplicate>; fallback = ${FALLBACK-VALUE}; "+_DELETE+" means delete")
+	private DuplicateDest duplicateDirname;
 
     @Option(names = {"--maxheight"},
     		arity = "0..1",
@@ -192,19 +189,19 @@ public class AMIFilterTool extends AbstractAMITool /*implements HasImageDir*/ {
             description = "minimum width (pixels) to accept")
     private int minWidth;
     
-    @Option(names = {"--monochrome"},
+    @Option(names = {"-m", "--monochrome"},
     		arity = "0..1",
-    		defaultValue = "monochrome",
-            description = "FILTER: move monochrome images to <monochrome>; default ${DEFAULT-VALUE}; "+_DELETE+" means delete"
+    		fallbackValue = "monochrome",
+            description = "FILTER: move monochrome images to <monochrome>; fallback ${FALLBACK-VALUE}; "+_DELETE+" means delete"
             )
-	private MonochromeDest monochromeDirname = MonochromeDest.monochrome;
+	private MonochromeDest monochromeDirname;
 
-    @Option(names = {"--small"},
+    @Option(names = {"-s", "--small"},
     		arity = "0..1",
-    		defaultValue = "small",
-            description = "FILTER: move small images to <monochrome>; default ${DEFAULT-VALUE}; "+_DELETE+" means delete"
+    		fallbackValue = "small",
+            description = "FILTER: move small images to <monochrome>; fallback ${FALLBACK-VALUE}; "+_DELETE+" means delete"
             )
-	private SmallDest smallDirname = SmallDest.small;
+	private SmallDest smallDirname ;
     
 
 	public static final String DUPLICATES = "duplicates/";
@@ -234,16 +231,12 @@ public class AMIFilterTool extends AbstractAMITool /*implements HasImageDir*/ {
 
     @Override
 	protected void parseSpecifics() {
-		System.out.println("minHeight           " + minHeight);
-		System.out.println("minWidth            " + minWidth);
-		System.out.println("smalldir            " + smallDirname);
-		System.out.println("monochromeDir       " + monochromeDirname);
-		System.out.println("duplicateDir        " + duplicateDirname);
-		System.out.println("maxheight           " + maxHeight);
-		System.out.println("maxwidth            " + maxWidth);
-		System.out.println();
+    	super.parseSpecifics();
 	}
 
+    public String getSpecifics() {
+    	return getOptionsValue();
+    }
 
     @Override
     protected void runSpecifics() {

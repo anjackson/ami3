@@ -10,20 +10,29 @@ import org.apache.commons.io.IOUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.ami.tools.download.AbstractMetadataEntry;
-import org.contentmine.ami.tools.download.ResultSet;
+import org.contentmine.ami.tools.download.HitList;
 import org.contentmine.ami.tools.download.biorxiv.BiorxivDownloader;
 import org.contentmine.cproject.files.CProject;
 import org.contentmine.cproject.files.CTree;
 import org.contentmine.cproject.files.CTreeList;
 import org.contentmine.cproject.metadata.AbstractMetadata;
+import org.contentmine.cproject.util.CMineGlobber;
 import org.contentmine.cproject.util.CMineTestFixtures;
 import org.contentmine.cproject.util.CMineUtil;
 import org.contentmine.eucl.xml.XMLUtil;
+import org.contentmine.graphics.html.HtmlElement;
 import org.contentmine.graphics.html.HtmlLi;
 import org.contentmine.graphics.html.HtmlUl;
+import org.contentmine.html.util.WebDriverXom;
 import org.hamcrest.MatcherAssert;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
+import org.openqa.selenium.By;
+import org.openqa.selenium.WebDriver;
+import org.openqa.selenium.WebElement;
+import org.openqa.selenium.chrome.ChromeDriver;
+import org.openqa.selenium.chrome.ChromeOptions;
 
 import nu.xom.Element;
 
@@ -33,6 +42,7 @@ import nu.xom.Element;
  *
  */
 public class AMIDownloadTest extends AbstractAMITest {
+	private static final String CHROMEDRIVER = "/usr/local/bin/chromedriver";
 	public static final Logger LOG = Logger.getLogger(AMIDownloadTest.class);
 	static {
 		LOG.setLevel(Level.DEBUG);
@@ -51,24 +61,27 @@ public class AMIDownloadTest extends AbstractAMITest {
 	@Test
 	/** 
 	 * run query
+	 * inline this is 
+	ami download -p target/biorxiv --site biorxiv --query coronavirus --pagesize 1 --pages 1 1 --fulltext pdf html --resultset raw clean
 	 */
 	public void testBiorxivSmall() throws Exception {
 		
 		File target = new File("target/biorxiv1");
-		FileUtils.deleteDirectory(target);
+		if (target.exists()) {FileUtils.deleteDirectory(target);}
 		MatcherAssert.assertThat(target+" does not exist", !target.exists());
 		String args = 
 				"-p " + target
+				+ " download"
 				+ " --site biorxiv" // the type of site 
 				+ " --query coronavirus" // the query
 				+ " --pagesize 1" // size of remote pages (may not always work)
 				+ " --pages 1 1" // number of pages
+				+ " --fulltext pdf html"
 				+ " --resultset raw clean"
-				+ " --landingpage "
-				+ " --fulltext html pdf"
 //				+ " --limit 500"  // total number of downloaded results
 			;
-		new AMIDownloadTool().runCommands(args);
+		AMI.execute(args);
+		Assert.assertTrue("target exists", target.exists());
 		// check for reserved and non-reserved child files
 		long fileCount0 = Files.walk(target.toPath(), AbstractMetadata.CPROJECT_DEPTH)
 				.sorted()
@@ -98,27 +111,221 @@ public class AMIDownloadTest extends AbstractAMITest {
 	@Test
 	/** 
 	 * run query
+	 * VERY long
 	 */
-	public void testBiorxiv() throws Exception {
+	/**
+	 * fails around
+	 * ...
+running [curl, -X, GET, https://www.biorxiv.org/content/10.1101/798546v1]
+.skipping (existing) hitList: target/biorxiv/10_1101_798546v1
+skipping existing : abstract.html
+skipping existing : fulltext.html
+skipping existing : fulltext.pdf
+skipped: 10_1101_2020_03_17_995209v1
+running [curl, -X, GET, https://www.biorxiv.org/content/10.1101/2020.03.17.995209v1]
+.skipping (existing) hitList: target/biorxiv/10_1101_2020_03_17_995209v1
+skipping existing : abstract.html
+skipping existing : fulltext.html
+skipping existing : fulltext.pdf
+skipped: 10_1101_862573v2
+running [curl, -X, GET, https://www.biorxiv.org/content/10.1101/862573v2]
+[Fatal Error] :341:633: The reference to entity "amp" must end with the ';' delimiter.
+<341/633>badline > <div id="hw-article-author-popups-node1073120" style="display: none;"><div class="author-tooltip-0"><div class="author-tooltip-name">Ivan S. Kholodilov </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Ivan%2BS.%2BKholodilov%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Kholodilov%20IS&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AIvan%2BS.%2BKholodilov%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-3764-7081" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Ivan S. Kholodilov</a></li></ul></div><div class="author-tooltip-1"><div class="author-tooltip-name">Alexander G. Litov </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Alexander%2BG.%2BLitov%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Litov%20AG&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AAlexander%2BG.%2BLitov%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-6086-3655" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Alexander G. Litov</a></li></ul></div><div class="author-tooltip-2"><div class="author-tooltip-name">Alexander S. Klimentov </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div><div class='author-affiliation'><span class='nlm-sup'>2</span><span class='nlm-institution'>Federal Research Centre for Epidemiology and Microbiology named after the honorary academician N.F. Gamaleya of the Ministry of Health of the Russian Federation</span>, Gamaleya street 18, Moscow 123098, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Alexander%2BS.%2BKlimentov%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Klimentov%20AS&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AAlexander%2BS.%2BKlimentov%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-6472-3828" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Alexander S. Klimentov</a></li></ul></div><div class="author-tooltip-3"><div class="author-tooltip-name">Oxana A. Belova </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div><div class='author-affiliation'><span class='nlm-sup'>3</span><span class='nlm-institution'>Martsinovsky Institute of Medical Parasitology, Tropical and Vector Borne Diseases, Sechenov University</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Oxana%2BA.%2BBelova%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Belova%20OA&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AOxana%2BA.%2BBelova%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-9040-0774" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Oxana A. Belova</a></li></ul></div><div class="author-tooltip-4"><div class="author-tooltip-name">Alexandra E. Polienko </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Alexandra%2BE.%2BPolienko%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Polienko%20AE&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AAlexandra%2BE.%2BPolienko%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0003-1585-8571" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Alexandra E. Polienko</a></li></ul></div><div class="author-tooltip-5"><div class="author-tooltip-name">Nikolai A. Nikitin </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>4</span><span class='nlm-institution'>Faculty of Biology, Lomonosov MSU</span>, Lenin Hills, 1/12, Moscow 119234, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Nikolai%2BA.%2BNikitin%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Nikitin%20NA&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3ANikolai%2BA.%2BNikitin%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0001-9626-2336" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Nikolai A. Nikitin</a></li></ul></div><div class="author-tooltip-6"><div class="author-tooltip-name">Alexey M. Shchetinin </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>2</span><span class='nlm-institution'>Federal Research Centre for Epidemiology and Microbiology named after the honorary academician N.F. Gamaleya of the Ministry of Health of the Russian Federation</span>, Gamaleya street 18, Moscow 123098, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Alexey%2BM.%2BShchetinin%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Shchetinin%20AM&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AAlexey%2BM.%2BShchetinin%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0003-1842-3899" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Alexey M. Shchetinin</a></li></ul></div><div class="author-tooltip-7"><div class="author-tooltip-name">Anna Y. Ivannikova </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Anna%2BY.%2BIvannikova%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Ivannikova%20AY&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AAnna%2BY.%2BIvannikova%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0001-7698-7487" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Anna Y. Ivannikova</a></li></ul></div><div class="author-tooltip-8"><div class="author-tooltip-name">Lesley Bell-Sakyi </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>5</span><span class='nlm-institution'>Department of Infection Biology, Institute of Infection and Global Health, University of Liverpool</span>, Liverpool L3 5RF, <span class='nlm-country'>UK</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Lesley%2BBell-Sakyi%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Bell-Sakyi%20L&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3ALesley%2BBell-Sakyi%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-7305-0477" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Lesley Bell-Sakyi</a></li></ul></div><div class="author-tooltip-9"><div class="author-tooltip-name">Alexander S. Yakovlev </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Alexander%2BS.%2BYakovlev%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Yakovlev%20AS&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AAlexander%2BS.%2BYakovlev%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-1833-6122" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Alexander S. Yakovlev</a></li></ul></div><div class="author-tooltip-10"><div class="author-tooltip-name">Sergey V. Bugmyrin </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>6</span><span class='nlm-institution'>Institute of Biology of Karelian Research Centre of the Russian Academy of Sciences (IB KarRC RAS)</span>, Petrozavodsk, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Sergey%2BV.%2BBugmyrin%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Bugmyrin%20SV&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3ASergey%2BV.%2BBugmyrin%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0001-5285-6933" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Sergey V. Bugmyrin</a></li></ul></div><div class="author-tooltip-11"><div class="author-tooltip-name">Liubov A. Bespyatova </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>6</span><span class='nlm-institution'>Institute of Biology of Karelian Research Centre of the Russian Academy of Sciences (IB KarRC RAS)</span>, Petrozavodsk, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Liubov%2BA.%2BBespyatova%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Bespyatova%20LA&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link last"><a href="/search/author1%3ALiubov%2BA.%2BBespyatova%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li></ul></div><div class="author-tooltip-12"><div class="author-tooltip-name">Larissa V. Gmyl </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Larissa%2BV.%2BGmyl%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Gmyl%20LV&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link last"><a href="/search/author1%3ALarissa%2BV.%2BGmyl%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li></ul></div><div class="author-tooltip-13"><div class="author-tooltip-name">Svetlana V. Luchinina </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>7</span><span class='nlm-institution'>Russian Federal Service for Surveillance on Consumer Rights Protection and Human Wellbeing</span>, Yelkin str., 73, Chelyabinsk 454091, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Svetlana%2BV.%2BLuchinina%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Luchinina%20SV&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link last"><a href="/search/author1%3ASvetlana%2BV.%2BLuchinina%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li></ul></div><div class="author-tooltip-14"><div class="author-tooltip-name">Anatoly P. Gmyl </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Anatoly%2BP.%2BGmyl%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Gmyl%20AP&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link last"><a href="/search/author1%3AAnatoly%2BP.%2BGmyl%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li></ul></div><div class="author-tooltip-15"><div class="author-tooltip-name">Vladimir A. Gushchin </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>2</span><span class='nlm-institution'>Federal Research Centre for Epidemiology and Microbiology named after the honorary academician N.F. Gamaleya of the Ministry of Health of the Russian Federation</span>, Gamaleya street 18, Moscow 123098, <span class='nlm-country'>Russia</span></div><div class='author-affiliation'><span class='nlm-sup'>4</span><span class='nlm-institution'>Faculty of Biology, Lomonosov MSU</span>, Lenin Hills, 1/12, Moscow 119234, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp;;gs_type=author&amp;;author%5B0%5D=Vladimir%2BA.%2BGushchin%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Gushchin%20VA&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AVladimir%2BA.%2BGushchin%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link last"><a href="http://orcid.org/0000-0002-9397-3762" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Vladimir A. Gushchin</a></li></ul></div><div class="author-tooltip-16"><div class="author-tooltip-name">Galina G. Karganova </div><div class="author-tooltip-affiliation"><span class="author-tooltip-text"><div class='author-affiliation'><span class='nlm-sup'>1</span><span class='nlm-institution'>“Chumakov Institute of Poliomyelitis and Viral Encephalitides” FSBSI “Chumakov FSC R[[D IBP RAS”</span>, Moscow, <span class='nlm-country'>Russia</span></div><div class='author-affiliation'><span class='nlm-sup'>8</span><span class='nlm-institution'>Institute for Translational Medicine and Biotechnology, Sechenov University</span>, Bolshaya Pirogovskaya st, 2, Moscow, 119991, <span class='nlm-country'>Russia</span></div></span></div><ul class="author-tooltip-find-more"><li class="author-tooltip-gs-link first"><a href="/lookup/google-scholar?link_type=googlescholar&amp]]gs_type=author&amp;;author%5B0%5D=Galina%2BG.%2BKarganova%2B" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on Google Scholar</a></li><li class="author-tooltip-pubmed-link"><a href="/lookup/external-ref?access_num=Karganova%20GG&amp;;link_type=AUTHORSEARCH" target="_blank" class="" data-icon-position="" data-hide-link-title="0">Find this author on PubMed</a></li><li class="author-site-search-link"><a href="/search/author1%3AGalina%2BG.%2BKarganova%2B" rel="nofollow" class="" data-icon-position="" data-hide-link-title="0">Search for this author on this site</a></li><li class="author-orcid-link"><a href="http://orcid.org/0000-0002-8901-6206" target="_blank" class="" data-icon-position="" data-hide-link-title="0">ORCID record for Galina G. Karganova</a></li><li class="author-corresp-email-link last"><span>For correspondence: 
+e=googlescholar&amp]]gs_type=author&amp;
+CANNOT PARSE:
+<!DOCTYPE html>
+<html lang="en" dir="ltr" 
+  xmlns="http://www.w3.org/1999/xhtml"
+  xmlns:mml="http:
+1394887 [main] ERROR org.contentmine.ami.tools.download.AbstractMetadataEntry  - Cannot parse: java.lang.RuntimeException: nu.xom.ParsingException: The reference to entity "amp" must end with the ';' delimiter. at line 341, column 633
+1394887 [main] ERROR org.contentmine.ami.tools.download.AbstractMetadataEntry  - Cannot parse: java.lang.RuntimeException: nu.xom.ParsingException: The reference to entity "amp" must end with the ';' delimiter. at line 341, column 633
+.skipped: 10_1101_455568v1
+running [curl, -X, GET, https://www.biorxiv.org/content/10.1101/455568v1]
+.skipping (existing) hitList: target/biorxiv/10_1101_455568v1
+skipping existing : abstract.html
+skipping existing : fulltext.html
+skipping existing : fulltext.pdf
+
+likely to be edited frequently while debugging!
+
+	 * @throws Exception
+	 */
+	public void testBiorxivIT() throws Exception {
+		String biorxiv = "target/biorxiv";
+		String args = "-p " + "target"
+				+ " clean"
+				+ " biorxiv/"; // TODO verify that this works as desired
+		AMI.execute(args);
 		
-		String args = 
-				"-p target/biorxiv"
+		args = 
+				"-p " + biorxiv
+				+ " download"
 				+ " --site biorxiv"
 				+ " --query coronavirus"
-				+ " --pagesize 40"
+				+ " --pagesize 100"
+//				+ " --pagesize 4"
 				+ " --pages 1 10"
-				+ " --limit 500"
+//				+ " --pages 1 3"
+				+ " --fulltext html"
+				+ " --limit 2000"
 			;
-		new AMIDownloadTool().runCommands(args);
+		AMI.execute(args);
+// first creates the hitLists		
+
+//		File file962688v1 = new File(biorxiv, "10_1101_2020_02_24_962688v1");
+//		Assert.assertTrue(""+file962688v1, file962688v1.exists());
+//		Assert.assertTrue(""+file962688v1, new File(file962688v1, "abstract.html").exists());
+//		Assert.assertTrue(""+file962688v1, new File(file962688v1, "landingPage.html").exists());
+//		Assert.assertTrue(""+file962688v1, new File(file962688v1, "hitList.html").exists());
+//		Assert.assertTrue(""+file962688v1, new File(file962688v1, "scrapedMetadata.html").exists());
+//		Assert.assertTrue(""+file962688v1, new File(file962688v1, "fulltext.html").exists());
+//		Assert.assertTrue(""+file962688v1, new File(file962688v1, "fulltext.pdf").exists());
+		
+		System.out.println("exited normally");
+		
+/**
+ * problem comes at		
+ *   
+ */
+	}
+
+	/**
+	 * Test the hitLists. These are wrong...
+	 * 
+	 * Query: aardvark%20sort%3Arelevance-rank%20numresults%3A10
+URL https://www.biorxiv.org/search/aardvark%20sort%3Arelevance-rank%20numresults%3A10
+runing curl :https://www.biorxiv.org/search/aardvark%20sort%3Arelevance-rank%20numresults%3A10 to target/biorxiv/aardvark/__metadata/hitList1.html
+wrote hitList: /Users/pm286/workspace/cmdev/ami3/target/biorxiv/aardvark/__metadata/hitList1.clean.html
+metadataEntries 10
+calculating hits NYI
+Results 10
+runing curl :https://www.biorxiv.org/search/aardvark%20sort%3Arelevance-rank%20numresults%3A10 to target/biorxiv/aardvark/__metadata/hitList2.html
+wrote hitList: /Users/pm286/workspace/cmdev/ami3/target/biorxiv/aardvark/__metadata/hitList2.clean.html
+metadataEntries 1
+Results 1
+runing curl :https://www.biorxiv.org/search/aardvark%20sort%3Arelevance-rank%20numresults%3A10 to target/biorxiv/aardvark/__metadata/hitList3.html
+wrote hitList: /Users/pm286/workspace/cmdev/ami3/target/biorxiv/aardvark/__metadata/hitList3.clean.html
+metadataEntries 10
+Results 10
+runing curl :https://www.biorxiv.org/search/aardvark%20sort%3Arelevance-rank%20numresults%3A10 to target/biorxiv/aardvark/__metadata/hitList4.html
+wrote hitList: /Users/pm286/workspace/cmdev/ami3/target/biorxiv/aardvark/__metadata/hitList4.clean.html
+metadataEntries 10
+Results 10
+[target/biorxiv/aardvark/__metadata/hitList1.clean.html, target/biorxiv/aardvark/__metadata/hitList2.clean.html, target/bi
+
+gives:
+-rw-r--r--@ 1 pm286  staff  23952 19 Apr 18:29 __metadata/hitList4.clean.html
+-rw-r--r--@ 1 pm286  staff  23952 19 Apr 18:29 __metadata/hitList3.clean.html
+-rw-r--r--@ 1 pm286  staff   3028 19 Apr 18:27 __metadata/hitList2.clean.html
+-rw-r--r--@ 1 pm286  staff  26641 19 Apr 18:27 __metadata/hitList1.clean.html
+
+hitList2 and hitList3 are the wrong way round.
+
+	 *
+	 */
+	@Test
+	public void testSmallMultipageDownload() {
+		String args;
+		String biorxiv = "target/biorxiv/aardvark";
+        args = "-p " + "target"
+				+ " clean"
+				+ " biorxiv/";
+		AMI.execute(args);
+		
+		args = 
+				"-p " + biorxiv +""
+				+ " download"
+				+ " --site biorxiv"
+				+ " --query aardvark"
+				+ " --pagesize 10"
+				+ " --pages 1 4"        // should leave page 4 blank
+				+ " --fulltext html"
+				+ " --limit 2000"
+			;
+		AMIDownloadTool amiDownload = AMI.execute(AMIDownloadTool.class, args);
+//		AMIDownloadTool amiDownload = AMI.execute(args);
+
+	}
+	
+	@Test
+	public void testMedrxivDownload() {
+		String args;
+		String biorxiv = "target/medrxiv/ebola";
+        args = "-p " + "target"
+				+ " clean"
+				+ " medrxiv/";
+		AMI.execute(args);
+		
+		args = 
+				"-p " + biorxiv +""
+				+ " download"
+				+ " --site medrxiv"
+				+ " --query \"ebola AND n95\""
+				+ " --pagesize 20"
+				+ " --pages 1 4"        
+				+ " --fulltext pdf"
+				+ " --limit 2000"
+			;
+		AMI.execute(args);
+		
+		List<File> files = CMineGlobber.listSortedDescendantFiles(new File(biorxiv), "pdf");
+		Assert.assertEquals("pdfs", 12, files.size());
+	}
+
+	@Test
+	public void testSDDownload() {
+		String args;
+		String sd = "target/sd/ebola";
+        args = "-p " + "target"
+				+ " clean"
+				+ " sd/";
+		AMI.execute(args);
+		
+		args = 
+				"-p " + sd +""
+				+ " download"
+				+ " --site sd"
+				+ " --query \"n95 AND ebola AND ghana\""
+				+ " --pagesize 20"
+				+ " --pages 1 4"        
+				+ " --fulltext pdf"
+				+ " --limit 2000"
+			;
+		AMIDownloadTool amiDownload = AMI.execute(AMIDownloadTool.class, args);
+	}
+
+	@Test
+	public void testHalDownload() {
+		String args;
+		String target = "target/hal/ebola";
+        args = "-p " + target
+				+ " clean"
+				+ " hal/";
+		AMI.execute(args);
+		
+		args = 
+				"-p " + target +""
+				+ " download"
+				+ " --site hal"
+				+ " --query ebola"
+				+ " --pagesize 20"
+				+ " --pages 1 4"        
+				+ " --fulltext pdf"
+				+ " --limit 2000"
+			;
+		AMIDownloadTool amiDownload = AMI.execute(AMIDownloadTool.class, args);
+
 	}
 
 	@Test
 	/** 
 	 * run query
 	 */
+	@Ignore
 	public void testBiorxivClimate() throws Exception {
 		String args = 
 				"-p target/biorxiv/climate"
+				+ " download"
 				+ " --site biorxiv"
 				+ " --query climate change"
 				+ " --metadata metadata"
@@ -127,8 +334,15 @@ public class AMIDownloadTest extends AbstractAMITest {
 				+ " --pages 1 3"
 				+ " --limit 100"
 			;
-		new AMIDownloadTool().runCommands(args);
-		Assert.assertTrue(new File("target/biorxiv/climate/metadata/page1.html").exists());
+		AMI.execute(args);
+// I think this is an outdated Assert.
+//		Assert.assertTrue(new File("target/biorxiv/climate/metadata/page1.html").exists());
+//		these should work
+		Assert.assertTrue(new File("target/biorxiv/climate/__metadata/hitList3.html").exists());
+		Assert.assertTrue(new File("target/biorxiv/climate/10_1101_2019_12_16_878348v1/landingPage.html").exists());
+		Assert.assertTrue(new File("target/biorxiv/climate/10_1101_2019_12_16_878348v1/rawFullText.html").exists());
+		Assert.assertTrue(new File("target/biorxiv/climate/10_1101_2019_12_16_878348v1/scholarly.html").exists());
+		Assert.assertTrue(new File("target/biorxiv/climate/10_1101_2019_12_16_878348v1/scrapedMetadata.html").exists());
 	}
 
 	// extract fulltext with div[class~="fulltext-view"]
@@ -182,7 +396,7 @@ public class AMIDownloadTest extends AbstractAMITest {
 //	public void testCurlDownloaderMultiple() throws Exception {
 //		File downloadDir = new File("target/biorxiv/");
 //		CurlDownloader curlDownloader = new CurlDownloader();
-//		// these are verbatim from the resultSet file
+//		// these are verbatim from the hitList file
 //		String[] fileroots = {
 //			       "/content/10.1101/2020.01.24.917864v1",
 //			       "/content/10.1101/850289v1",
@@ -212,16 +426,16 @@ public class AMIDownloadTest extends AbstractAMITest {
 	/**
 	 * 
 	 */
-	public void testCreateUnpopulatedCTreesFromResultSet() throws IOException {
+	public void testCreateUnpopulatedCTreesFromHitList() throws IOException {
 		File targetDir = new File("target/biorxiv/climate");
 		CMineTestFixtures.cleanAndCopyDir(CLIMATE_DIR, targetDir);
 		
 		CProject cProject = new CProject(targetDir);
 		File metadataDir = cProject.getOrCreateExistingMetadataDir();
-		/** reads existing resultSet file to create object */
-		ResultSet resultSet = new BiorxivDownloader().setCProject(cProject).createResultSet(new File(metadataDir, "resultSet1.clean.html"));
+		/** reads existing hitList file to create object */
+		HitList hitList = new BiorxivDownloader().setCProject(cProject).createHitList(new File(metadataDir, "hitList1.clean.html"));
 		// result set had default 10 entries
-		List<AbstractMetadataEntry> metadataEntryList = resultSet.getMetadataEntryList();
+		List<AbstractMetadataEntry> metadataEntryList = hitList.getMetadataEntryList();
 		Assert.assertEquals("metadata", 10, +metadataEntryList.size());
 		// metadata directory had 3 results sets, each raw and clean
 		Assert.assertEquals(6, metadataDir.listFiles().length);
@@ -231,7 +445,7 @@ public class AMIDownloadTest extends AbstractAMITest {
 		// this is the __metadata directory
 		Assert.assertEquals(1,  cProject.getDirectory().listFiles().length);
 		// create trees from result set
-		resultSet.createCTrees(cProject);
+		hitList.createCTrees(cProject);
 		Assert.assertEquals("Ctree count", 10, cProject.getOrCreateCTreeList().size());
 		
 		
@@ -241,15 +455,15 @@ public class AMIDownloadTest extends AbstractAMITest {
 //	/**
 //	 * as above, but download landing pages
 //	 */
-//	public void testCreateCTreeLandingPagesFromResultSetIT() throws IOException {
+//	public void testCreateCTreeLandingPagesFromHitListIT() throws IOException {
 //		File targetDir = new File("target/biorxiv/climate");
 //		CMineTestFixtures.cleanAndCopyDir(CLIMATE_DIR, targetDir);
 //		
 //		CProject cProject = new CProject(targetDir).cleanAllTrees();
 //		File metadataDir = cProject.getOrCreateExistingMetadataDir();
 //		AbstractDownloader biorxivDownloader = new BiorxivDownloader().setCProject(cProject);
-//		ResultSet resultSet = biorxivDownloader.createResultSet(new File(metadataDir, "resultSet1.clean.html"));
-//		List<String> fileroots = resultSet.getCitationLinks();
+//		HitList hitList = biorxivDownloader.createHitList(new File(metadataDir, "hitList1.clean.html"));
+//		List<String> fileroots = hitList.getCitationLinks();
 //		CurlDownloader curlDownloader = new CurlDownloader();
 //		for (String fileroot : fileroots) {
 //			curlDownloader.addCurlPair(biorxivDownloader.createLandingPageCurlPair(cProject.getDirectory(), fileroot));
@@ -265,16 +479,18 @@ public class AMIDownloadTest extends AbstractAMITest {
 //	}
 	
 	@Test
-	/** issues a search  and turns results into resultSet
+	/** issues a search  and turns results into hitList
 	 * 
+	 * LONG 68 s
 	 */
-	public void testBiorxivSearchResultSetIT() throws IOException {
+	public void testBiorxivSearchHitListIT() throws IOException {
 		File targetDir = new File("target/biorxiv/testsearch4");
 		FileUtils.deleteQuietly(targetDir);
 		CProject cProject = new CProject(targetDir).cleanAllTrees();
 		cProject.cleanAllTrees();
 		String args = 
 				"-p " + cProject.toString()
+				+ " download"
 				+ " --site biorxiv"
 				+ " --query climate change"
 				+ " --metadata __metadata"
@@ -282,12 +498,11 @@ public class AMIDownloadTest extends AbstractAMITest {
 				+ " --pagesize 4"
 				+ " --pages 1 1"
 				+ " --limit 4"
-				+ " --resultset resultSet1.clean.html"
+				+ " --resultset hitList1.clean.html"
 			;
-		AMIDownloadTool downloadTool = new AMIDownloadTool();
-		downloadTool.runCommands(args);
-		Assert.assertTrue(new File(targetDir, "__metadata/resultSet1.html").exists());
-		Assert.assertTrue(new File(targetDir, "__metadata/resultSet1.clean.html").exists());
+		AMIDownloadTool downloadTool = AMI.execute(AMIDownloadTool.class, args);
+		Assert.assertTrue(new File(targetDir, "__metadata/hitList1.html").exists());
+		Assert.assertTrue(new File(targetDir, "__metadata/hitList1.clean.html").exists());
 		CTreeList cTreeList = new CProject(targetDir).getOrCreateCTreeList();
 		Assert.assertEquals(4, cTreeList.size());
 		File directory0 = cTreeList.get(0).getDirectory();
@@ -303,29 +518,33 @@ public class AMIDownloadTest extends AbstractAMITest {
 		Assert.assertTrue(projectDir.toString(), projectDir.exists());
 		String command = ""
 				+ "-p "+projectDir+""
-				+ ""
+				+ " section"
 				;
-		AMISectionTool sectionTool = new AMISectionTool();
-		sectionTool.runCommands(command);
+		//AMISectionTool sectionTool = new AMISectionTool().runCommands(command);
+		AMI.execute(command);
 	}
 
 	@Test
+	@Ignore // why is this here?
 	public void testSearch() {
 		File projectDir = new File(DOWNLOAD_DIR,  "testsearch99");
 		Assert.assertTrue(projectDir.toString(), projectDir.exists());
 		String command = ""
 				+ "-p "+projectDir+""
+				+ " search"
 				+ " --dictionary country disease funders species"
 				;
-		AMISearchTool searchTool = new AMISearchTool();
-		searchTool.runCommands(command);
+//		AMISearchTool searchTool = new AMISearchTool();
+//		searchTool.runCommands(command);
+		AMI.execute(command);
 	}
 
 	@Test
-	/** issues a search  and turns results into resultSet
+	/** issues a search  and turns results into hitList
 	 * 
+	 * LONG 60
 	 */
-	public void testBiorxivSearchResultSetLargeIT() throws IOException {
+	public void testBiorxivSearchHitListLargeIT() throws IOException {
 		int pagesize = 3;
 		int pages = 2;
 		File targetDir = new File("target/biorxiv/testsearch" + pagesize);
@@ -335,6 +554,7 @@ public class AMIDownloadTest extends AbstractAMITest {
 		cProject.getOrCreateExistingMetadataDir();
 		String args = 
 				"-p " + cProject.toString()
+				+ " download"
 				+ " --site biorxiv"
 				+ " --query climate change"
 				+ " --metadata __metadata"
@@ -343,25 +563,27 @@ public class AMIDownloadTest extends AbstractAMITest {
 				+ " --pagesize " + pagesize
 				+ " --pages 1 " + pages
 //				+ " --limit " + (pagesize * pages)
-//				+ " --resultset resultSet1.clean.html"
+//				+ " --resultset hitList1.clean.html"
 			;
-		AMIDownloadTool downloadTool = new AMIDownloadTool();
-		downloadTool.runCommands(args);
-
+//		AMIDownloadTool downloadTool = new AMIDownloadTool();
+//		downloadTool.runCommands(args);
+		AMI.execute(args);
 	}
 
 	
 	@Test
-	/** issues a search  and turns results into resultSet
+	/** issues a search  and turns results into hitList
 	 * 
 	 */
-	public void testHALSearchResultSet() throws IOException {
+	@Ignore // HTML DTD problem 
+	public void testHALSearchHitList() throws IOException {
 		File targetDir = new File("target/hal/testsearch4");
 		FileUtils.deleteQuietly(targetDir);
 		CProject cProject = new CProject(targetDir).cleanAllTrees();
 		cProject.cleanAllTrees();
 		String args = 
 				"-p " + cProject.toString()
+				+ " download"
 				+ " --site hal"
 				+ " --query permafrost"
 				+ " --metadata __metadata"
@@ -369,12 +591,11 @@ public class AMIDownloadTest extends AbstractAMITest {
 				+ " --pagesize 4"
 				+ " --pages 1 1"
 				+ " --limit 4"
-				+ " --resultset resultSet1.clean.html"
+				+ " --resultset hitList1.clean.html"
 			;
-		AMIDownloadTool downloadTool = new AMIDownloadTool();
-		downloadTool.runCommands(args);
-		Assert.assertTrue(new File(targetDir, "__metadata/resultSet1.html").exists());
-		Assert.assertTrue(new File(targetDir, "__metadata/resultSet1.clean.html").exists());
+		AMIDownloadTool downloadTool = AMI.execute(AMIDownloadTool.class, args);
+		Assert.assertTrue(new File(targetDir, "__metadata/hitList1.html").exists());
+		Assert.assertTrue(new File(targetDir, "__metadata/hitList1.clean.html").exists());
 		CTreeList cTreeList = new CProject(targetDir).getOrCreateCTreeList();
 		Assert.assertEquals(4, cTreeList.size());
 		File directory0 = cTreeList.get(0).getDirectory();
@@ -478,10 +699,10 @@ public class AMIDownloadTest extends AbstractAMITest {
 	 */
 	
 	@Test 
-	public void testCreateResultSet() {
-		File resultSetClean1 = new File("src/test/resources/org/contentmine/ami/tools/download/scielo/resultSet1.mid.html");
-		Assert.assertTrue("resultSet1.mid", resultSetClean1.exists());
-		Element resultSet1mid = XMLUtil.parseQuietlyToRootElement(resultSetClean1);
+	public void testCreateHitList() {
+		File hitListClean1 = new File("src/test/resources/org/contentmine/ami/tools/download/scielo/hitList1.mid.html");
+		Assert.assertTrue("hitList1.mid", hitListClean1.exists());
+		Element hitList1mid = XMLUtil.parseQuietlyToRootElement(hitListClean1);
 /**
   <center>
     <table width="600" border="0" cellpadding="0" cellspacing="0">
@@ -506,16 +727,16 @@ public class AMIDownloadTest extends AbstractAMITest {
 //		    <td width="15%"> </td>
 //		    <td>
 //		     <font class="isoref" 
-		List<Element> biblioList = XMLUtil.getQueryElements(resultSet1mid, ".//tbody/tr/td//.[font[@class='negrito']]");
+		List<Element> biblioList = XMLUtil.getQueryElements(hitList1mid, ".//tbody/tr/td//.[font[@class='negrito']]");
 		Assert.assertEquals("biblio", 10, biblioList.size());
-		Element resultSetUl = new HtmlUl();
+		Element hitListUl = new HtmlUl();
 		for (Element biblio : biblioList) {
-			HtmlLi li = new HtmlLi();
-			resultSetUl.appendChild(li);
+			HtmlElement li = new HtmlLi();
+			hitListUl.appendChild(li);
 			biblio.detach();
 			li.appendChild(biblio);
 		}
-		XMLUtil.writeQuietly(resultSetUl, new File("target/scielo/ul.html"), 1);
+		XMLUtil.writeQuietly(hitListUl, new File("target/scielo/ul.html"), 1);
 		
 		System.out.println("B "+biblioList.size());
 		
@@ -531,15 +752,18 @@ public class AMIDownloadTest extends AbstractAMITest {
 		CProject cProject = new CProject(testSearch3Dir);
 		String cmd = ""
 				+ "-p " + cProject + ""
+				+ " search"
 				+ " --dictionary country"
 				+ "";
-		new AMISearchTool().runCommands(cmd);
+		//new AMISearchTool().runCommands(cmd);
+		AMI.execute(cmd);
 		CTree cTree = cProject.getCTreeByName("10_1101_2020_01_12_903427v1");
 		Assert.assertTrue(cTree.getDirectory().exists());
 	}
 
 
 	@Test
+	@Ignore // too long
 	public void testDownloadAndSearchLongIT() {
 		File testSearch3Dir = new File(DOWNLOAD_DIR, "testsearch50");
 		CProject cProject = new CProject(testSearch3Dir);
@@ -547,6 +771,7 @@ public class AMIDownloadTest extends AbstractAMITest {
 		int pages = 1;
 		String args = 
 				"-p " + cProject.toString()
+				+ " download"
 				+ " --site biorxiv"
 				+ " --query climate change"
 				+ " --metadata __metadata"
@@ -554,18 +779,32 @@ public class AMIDownloadTest extends AbstractAMITest {
 				+ " --pagesize " + pagesize
 				+ " --pages 1 " + pages
 			;
-		AMIDownloadTool downloadTool = new AMIDownloadTool();
-		downloadTool.runCommands(args);
+		AMI.execute(args);
 		String cmd = ""
 				+ "-p " + cProject + ""
+				+ " search"
 				+ " --dictionary country disease funders"
 				+ "";
-		new AMISearchTool().runCommands(cmd);
+		//new AMISearchTool().runCommands(cmd);
+		AMI.execute(cmd);
 //		CTree cTree = cProject.getCTreeByName("10_1101_2020_01_12_903427v1");
 //		Assert.assertTrue(cTree.getDirectory().exists());
 	}
 
-	
+	@Test
+	public void testChromeDriver() {
+		
+		String chromeDriverPath = CHROMEDRIVER ;
+		System.setProperty("webdriver.chrome.driver", chromeDriverPath);
+		ChromeOptions options = new ChromeOptions();
+		options.addArguments("--headless", "--disable-gpu", "--window-size=1920,1200","--ignore-certificate-errors");
+		WebDriver driver = new ChromeDriver(options);	
+		driver.get("http://europepmc.org/article/MED/32211289");
+		WebElement webElement = driver.findElement(By.xpath("/*"));
+		Element root = new WebDriverXom().createXomElement(webElement);
+		System.out.println(root.toXML());
+		XMLUtil.writeQuietly(root, new File("target/junk.xml"), 1);
+	}
 	
 
 

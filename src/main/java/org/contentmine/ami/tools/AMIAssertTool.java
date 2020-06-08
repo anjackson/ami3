@@ -28,13 +28,9 @@ import picocli.CommandLine.Option;
 
 
 @Command(
-name = "ami-assert", 
-aliases = "assert",
-version = "ami-assert 0.1",
-description = "	Makes assertions about objects created by AMI. "
-		
+	name = "assert",
+	description = "Makes assertions about objects created by AMI. "
 )
-
 public class AMIAssertTool extends AbstractAMITool {
 
 	private static final Logger LOG = Logger.getLogger(AMIAssertTool.class);
@@ -82,7 +78,7 @@ public class AMIAssertTool extends AbstractAMITool {
     private List<Integer> sizes = new ArrayList<>();
 
     @Option(names = {"--type"},
-    		arity = "1",
+    		required = true,
             description = "type of object to assert")
     private AssertType assertType = null;
 
@@ -119,6 +115,10 @@ public class AMIAssertTool extends AbstractAMITool {
     	new AMIAssertTool().runCommands(args);
     }
 
+	@Option(names = {"--subdirectorytype"},
+			description = "Use subdirectory of cTree (${COMPLETION-CANDIDATES})")
+	protected SubDirectoryType subdirectoryType;
+
     @Override
 	protected void parseSpecifics() {
     	if (assertType == null) {
@@ -127,6 +127,7 @@ public class AMIAssertTool extends AbstractAMITool {
     	messageString = String.join(" ", message);
     	xpath = unescape(xpath);
 		System.out.println("currentDirname      " + currentDirname);
+		System.out.println("subdirectoryType    " + subdirectoryType);
 		System.out.println("fail                " + fail);
 		System.out.println("currentFilename     " + currentFilename);
 		System.out.println("heights             " + heights);
@@ -157,7 +158,7 @@ public class AMIAssertTool extends AbstractAMITool {
 			iterateOverSVGFiles();
 		} else {
 			currentDir = cTree.getDirectory();
-			this.currentFile = new File(currentDir, inputBasename);
+			this.currentFile = new File(currentDir, getInputBasename());
 			this.runAssert();
 			
 		}
@@ -169,11 +170,11 @@ public class AMIAssertTool extends AbstractAMITool {
 		Collections.sort(imageDirs);
 		for (int i = 0; i < imageDirs.size(); i++) {
 			currentDir = imageDirs.get(i);
-			System.out.println("======>" + currentDir.getName()+"/"+inputBasename);
-			if (inputBasename== null) {
+			System.out.println("======>" + currentDir.getName() + "/" + getInputBasename());
+			if (getInputBasename() == null) {
 				System.err.println("No input basename");
 			} else {
-				this.currentFile = new File(currentDir, inputBasename);
+				this.currentFile = new File(currentDir, getInputBasename());
 				this.runAssert();
 			}
 		}
@@ -184,11 +185,11 @@ public class AMIAssertTool extends AbstractAMITool {
 		Collections.sort(imageDirs);
 		for (int i = 0; i < imageDirs.size(); i++) {
 			currentDir = imageDirs.get(i);
-			System.out.println("======>" + currentDir.getName()+"/"+inputBasename);
-			if (inputBasename== null) {
+			System.out.println("======>" + currentDir.getName() + "/" + getInputBasename());
+			if (getInputBasename() == null) {
 				System.err.println("No input basename");
 			} else {
-				this.currentFile = new File(currentDir, inputBasename);
+				this.currentFile = new File(currentDir, getInputBasename());
 				this.runAssert();
 			}
 		}

@@ -24,41 +24,45 @@ public class AMISearchToolTest {
 
 	@Test
 	public void testZikaSearch2() {
-//		String project = "zika2";
-		String project = "zika1";
+		String project = "zika2";
+//		String project = "zika1";
 		File rawDir = new File(NAConstants.TEST_AMI_DIR, project);
 		File targetDir = new File("target/cooccurrence/"+project);
 		CMineTestFixtures.cleanAndCopyDir(rawDir, targetDir);
 		String args = 
 				"-p "+targetDir
 //				"-t "+new File(targetDir, "PMC2640145")
+				+ " -vv"
+				+ " search"
 				+ " --dictionaryTop /Users/pm286/ContentMine/dictionary/dictionaries"
 				+ " --dictionary country "
-				+ " --oldstyle"  // old style
+//				+ " --no-oldstyle"  // old style
 //				+ " --ignorePlugins word"
-				+ " -v"
+//				+ " -v"
 			;
 		LOG.debug("args "+args);
-		new AMISearchTool().runCommands(args);
+//		new AMISearchTool().runCommands(args);
+		AMI.execute(args);
 	}
 	
 
 	@Test
+	/** this effectively runs
+	 * ami -p <targetDir> search --dictionary country
+	 */
 	public void testZikaCooccurrence0() {
+		System.out.println(AMIFixtures.TEST_ZIKA10_DIR);
 		File targetDir = new File("target/cooccurrence/zika10a");
-		CMineTestFixtures.cleanAndCopyDir(AMIFixtures.TEST_ZIKA10A_DIR, targetDir);
+		CMineTestFixtures.cleanAndCopyDir(AMIFixtures.TEST_ZIKA10_DIR, targetDir);
 		String args = 
-//				"-p /* /Users/pm286/workspace/cmdev/normami/target/cooccurrence/zika10a/"
-				"-p "+targetDir
-				+ " --dictionaryTop /Users/pm286/ContentMine/dictionary/dictionaries"
-				+ " --dictionary "
-				+ ""
-				+ "country species "
-				+ " --oldstyle"  // old style
-//				+ " --ignorePlugins word"
+				" -p "+targetDir
 				+ " -v"
+				+ " search"
+//				+ " --no-oldstyle"
+				+ " --dictionary "
+				+ " country disease"
 			;
-		new AMISearchTool().runCommands(args);
+		AMI.main(args);
 	}
 	
 	@Test
@@ -66,7 +70,7 @@ public class AMISearchToolTest {
 		File targetDir = new File("target/cooccurrence/zika10");
 		CMineTestFixtures.cleanAndCopyDir(AMIFixtures.TEST_ZIKA10_DIR, targetDir);
 		String args = 
-				"-p /Users/pm286/workspace/cmdev/normami/target/cooccurrence/zika10"
+				" -p /Users/pm286/workspace/cmdev/normami/target/cooccurrence/zika10"
 				+ " --dictionary species gene country disease funders "
 			;
 		new AMISearchTool().runCommands(args);

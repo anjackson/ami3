@@ -9,13 +9,13 @@ import org.contentmine.ami.AMIFixtures;
 import org.contentmine.cproject.util.CMineTestFixtures;
 import org.contentmine.cproject.util.CMineUtil;
 import org.contentmine.eucl.xml.XMLUtil;
-import org.contentmine.graphics.html.HtmlFactory;
 import org.contentmine.graphics.html.util.JsoupWrapper;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
 import org.jsoup.select.Elements;
 import org.junit.Assert;
+import org.junit.Ignore;
 import org.junit.Test;
 
 public class AMITransformToolTest {
@@ -24,6 +24,10 @@ public class AMITransformToolTest {
 		LOG.setLevel(Level.DEBUG);
 	}
 
+	@Test
+	public void testOptions() {
+		AMI.execute("-vv transform --tidy");
+	}
 	/** runs NormaTransformer
 	 * 
 	 */
@@ -31,10 +35,10 @@ public class AMITransformToolTest {
 	public void testZikaScholarlyHtml() {
 		File targetDir = new File("target/cooccurrence/zika10");
 		CMineTestFixtures.cleanAndCopyDir(AMIFixtures.TEST_ZIKA10_DIR, targetDir);
-		String args = 
-				"-p /Users/pm286/workspace/cmdev/normami/target/cooccurrence/zika10/"
+		String cmd = 
+				"-p " + targetDir + " -v " + " transform "
 			;
-		new AMITransformTool().runCommands(args);
+		AMI.execute(cmd);
 	}
 	
 	@Test
@@ -66,13 +70,14 @@ public class AMITransformToolTest {
 	}
 	
 	@Test
+//	@Ignore // FILE NOT FOUND
 	public void testTidyToolFile() throws IOException {
 		String command = ""
 				+ "-p target"
 				+ " --tidy jsoup"
-				+ " --input src/test/resoures/org/contentmine/ami/tools/download/scielo/resultSet1.html"
+				+ " --input src/test/resoures/org/contentmine/ami/tools/download/scielo/hitList1.html"
 				;
-		File file = new File("src/test/resoures/org/contentmine/ami/tools/download/scielo/resultSet1.html");
+		File file = new File("src/test/resoures/org/contentmine/ami/tools/download/scielo/hitList1.html");
 		Assert.assertTrue("file exists", file.exists());
 		Document jdoc = Jsoup.parse(file, CMineUtil.UTF_8.toString());
 //		System.out.println("DOC>"+JsoupWrapper.jSoupToXOM(jdoc).toXML());
@@ -81,5 +86,6 @@ public class AMITransformToolTest {
 		XMLUtil.writeQuietly(xDoc.getRootElement(), new File("target/jsoup/test.xml"), 1);
 //		new AMITransformTool().runCommands(command);
 	}
+	
 	
 }

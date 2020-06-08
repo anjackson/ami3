@@ -1,6 +1,7 @@
 package org.contentmine.image;
 
 import java.awt.Color;
+import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
 import java.awt.RenderingHints;
@@ -8,15 +9,14 @@ import java.awt.image.BufferedImage;
 import java.awt.image.ColorModel;
 import java.awt.image.ConvolveOp;
 import java.awt.image.Kernel;
+import java.awt.image.Raster;
 import java.awt.image.WritableRaster;
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.List;
 
 import javax.imageio.ImageIO;
 
-import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.cproject.files.CTree;
@@ -695,15 +695,18 @@ public class ImageUtil {
  	 * @return new BufferedImage
 	 */
 	public static BufferedImage flattenImage(BufferedImage image, int nvalues) {
-
+		if (nvalues == 0) {
+			LOG.error("Must give nvalues fpr flattening");
+		}
 		if (nvalues != 2 && nvalues != 4 && nvalues != 8 && nvalues != 16 &&
 		    nvalues != 32 && nvalues != 64 && nvalues != 128) {
-			throw new RuntimeException("Bad value of nvalues, should be power of 2 within 2 - 128");
+			throw new RuntimeException("Bad value of nvalues ("+nvalues+"), should be power of 2 within 2 - 128");
 		}
 		int delta = 256 / nvalues;
 		int width = image.getWidth();
 		int height = image.getHeight();
-		BufferedImage image1 = createARGBBufferedImage(width, height);
+//		BufferedImage image1 = createARGBBufferedImage(width, height);
+		BufferedImage image1 = ImageUtil.copyImage(image);
 		for (int i = 0; i < width; i++) {
 			for (int j = 0; j < height; j++) {
 				image1.setRGB(i, j, 0);
@@ -725,13 +728,14 @@ public class ImageUtil {
 
 	/** flattens pixel to range of values.
 	 * 
-	 * @param image
+	 * @param inputImage input image
 	 * @param i
 	 * @param j
 	 * @param delta distance between values (power of 2)
+	 * @param outputImage output image (must be same size and type as inputImage)
 	 */
-	public static void flattenPixel(BufferedImage image, int i, int j, int delta, BufferedImage image1) {
-		int rgb = image.getRGB(i, j);
+	public static void flattenPixel(BufferedImage inputImage, int i, int j, int delta, BufferedImage outputImage) {
+		int rgb = inputImage.getRGB(i, j);
 		int r = getRed(rgb);
 		int g = getGreen(rgb);
 		int b = getBlue(rgb);
@@ -741,7 +745,7 @@ public class ImageUtil {
 		b = flattenChannel(b, delta);
 		
 		int col = (r << 16) | (g << 8) | b;
-		image1.setRGB(i, j, col);
+		outputImage.setRGB(i, j, col);
 	}
 
 	/**
@@ -953,7 +957,7 @@ public class ImageUtil {
 		} catch (IndexOutOfBoundsException e) {
 			throw new RuntimeException("Cannot read image, probably corrupt file: "+file);
 		} catch (IOException e) {
-			throw new RuntimeException("Cannot read image: "+file);
+			throw new RuntimeException("Cannot read image: "+file, e);
 		}
 		return image;
 	}
@@ -1009,15 +1013,20 @@ public class ImageUtil {
 		return color;
 	}
 
+	/** hash because I think equals() is not reliable
+	 * 
+	 * @param image
+	 * @return
+	 */
 	public static long createSimpleHash(BufferedImage image) {
-		long l = 0;
+		long lng = 0;
 		for (int i = 0; i < image.getWidth(); i++) {
 			for (int j = 0; j <image.getHeight(); j++) {
 				int rgb = image.getRGB(i, j);
-				l += rgb * 31 + i * 17 + j * 7;
+				lng += rgb * 31 + i * 17 + j * 7;
 			}
 		}
-		return l;
+		return lng;
 	}
 	
 	// from stackoverflow
@@ -1361,6 +1370,7 @@ public class ImageUtil {
 			return;
 		}
 		try {
+			outputPng.mkdirs();
 			ImageIO.write(image, CTree.PNG, outputPng);
 		} catch (IOException e) {
 			throw new RuntimeException("Cannot write image: "+outputPng, e);
@@ -1738,5 +1748,52 @@ public class ImageUtil {
 		return true;
 	}
 
+	/** copy BufferedImage 
+	 * https://stackoverflow.com/questions/3514158/how-do-you-clone-a-bufferedimage
+	 * 
+	 * @param source
+	 * @return
+	 */
+	public static BufferedImage copyImage(BufferedImage source){
+	    BufferedImage b = new BufferedImage(source.getWidth(), source.getHeight(), source.getType());
+	    Graphics g = b.getGraphics();
+	    g.drawImage(source, 0, 0, null);
+	    g.dispose();
+	    return b;
+	}
+	
+	/** get pixels as row-wise raster
+	 * 
+	 * @param img
+	 * @return
+	 */
+	public static int[] getPixels(BufferedImage image) {
+		int width = image.getWidth();
+		int height = image.getHeight();
+		int[] pixels = new int[width * height];
+		int ipix = 0;
+		for (int irow = 0 ; irow < height; irow++) {
+			for (int jcol = 0 ; jcol < width; jcol++) {
+				pixels[ipix++] = image.getRGB(jcol, irow);
+			}
+		}
+		return pixels;
+	}
+
+	/** reads image from a y-first array of pixels */
+	public static BufferedImage create(int type, int[] pixels, int width, int height) {
+		BufferedImage image = ImageUtil.createImage(width, height, 0, type);
+		if (pixels.length != width * height) {
+			throw new RuntimeException(
+					"wrong dimensions: " + pixels.length + " != " + width + " * " + height);
+		}
+		int ipix = 0;
+		for (int irow = 0 ; irow < height; irow++) {
+			for (int jcol = 0 ; jcol < width; jcol++) {
+				image.setRGB(jcol, irow, pixels[ipix++]);
+			}
+		}
+		return image;
+	}
 	
 }

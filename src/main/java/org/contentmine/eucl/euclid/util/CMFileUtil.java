@@ -1,7 +1,14 @@
 package org.contentmine.eucl.euclid.util;
 
+import static java.nio.file.FileVisitResult.CONTINUE;
+
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.FileVisitResult;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
+import java.nio.file.attribute.BasicFileAttributes;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -369,7 +376,7 @@ public class CMFileUtil {
 	}
 
 	/**
-	 * force delete, avoidng message and exceptions
+	 * force delete, avoiding message and exceptions
 	 * @param file
 	 * @throws IOException
 	 */
@@ -379,6 +386,30 @@ public class CMFileUtil {
 		}
 	}
 
+	/**
+	 * force delete, avoiding message and exceptions
+	 * @param file
+	 */
+	public static void forceDeleteQuietly(File file) {
+		try {
+			forceDelete(file);
+		} catch (IOException e) {
+			System.err.println("cannot delete file: "+file+" ("+e.getMessage()+")");
+		}
+	}
+	
+	/**
+	 * force delete, avoiding message and exceptions
+	 * @param fileList
+	 */
+	public static void forceDeleteQuietly(List<File> fileList) {
+		if (fileList != null) {
+			for (File file : fileList) {
+				forceDeleteQuietly(file);
+			}
+		}
+	}
+	
 	/** force move, by testing for existence and copying/deleting
 	 * 
 	 * @param imageFile
@@ -427,6 +458,32 @@ public class CMFileUtil {
 		} catch (IOException e) {
 			throw new RuntimeException("Cannot make directory: "+dir+" already exists");
 		} // maybe 
+	}
+
+	/**
+	 * @author Remko Popka
+	 * @param temp
+	 * @return
+	 * @throws IOException
+	 */
+	public static List<Path> listFully(Path temp) throws IOException {
+		List<Path> after = new ArrayList<>();
+		Files.walkFileTree(temp, new SimpleFileVisitor<Path>() {
+			// Invoke the pattern matching method on each file.
+			@Override
+			public FileVisitResult visitFile(Path file, BasicFileAttributes attrs) {
+				after.add(file);
+				return CONTINUE;
+			}
+
+			// Invoke the pattern matching method on each directory.
+			@Override
+			public FileVisitResult preVisitDirectory(Path dir, BasicFileAttributes attrs) {
+				after.add(dir);
+				return CONTINUE;
+			}
+		});
+		return after;
 	}
 
 

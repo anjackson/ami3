@@ -13,6 +13,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.ami.tools.AMIDownloadTool;
+import org.contentmine.ami.tools.AMIDownloadTool.FulltextFormat;
 import org.contentmine.cproject.files.CTree;
 import org.contentmine.cproject.files.CTreeList;
 import org.contentmine.cproject.util.CMineUtil;
@@ -24,14 +25,14 @@ import org.contentmine.graphics.html.util.HtmlUtil;
 
 import nu.xom.Element;
 
-/** downloads the immediate results of a search to a ResultSet
+/** downloads the immediate results of a search to a HitList
  * 
  * @author pm286
  *
  */
 public class FulltextManager extends AbstractSubDownloader {
 
-private static final Logger LOG = Logger.getLogger(FulltextManager.class);
+	private static final Logger LOG = Logger.getLogger(FulltextManager.class);
 	static {
 		LOG.setLevel(Level.DEBUG);
 	}
@@ -40,23 +41,33 @@ private static final Logger LOG = Logger.getLogger(FulltextManager.class);
 		super(abstractDownloader);
 	}
 
-	public void downloadFullTextAndRelatedFiles() {
-		if (downloadTool.getRawFileFormats().size() > 0) {
-			boolean force = true;
-			CTreeList treeList = this.abstractDownloader.cProject.getOrCreateCTreeList(force);
-			AbstractDownloader downloader = this.downloadTool.getDownloader();
-			LandingPageManager landingPageManager = abstractDownloader.getOrCreateLandingPageManager();
-			for (CTree cTree : treeList) {
-				downloader.setCurrentTree(cTree);
-				AbstractLandingPage landingPage = null;
-				landingPage = landingPageManager.createCleanedLandingPage(cTree);
-				if (landingPage != null) {
-					try {
-						this.downloadLink(downloader, landingPage);
-					} catch (Exception e) {
-						System.err.println("Cannot get landing page: "+cTree+"; "+e.getMessage());
-					}
+	public void downloadFullTextAndRelatedFilesFromLandingPages() {
+		if (downloadTool == null) {
+			throw new RuntimeException("null downloadTool");
+		}
+		if (downloadTool.getFulltextFormats().size() == 0) {
+			System.out.println("=======no output formats");
+			return;
+		}
+		boolean force = true;
+		CTreeList treeList = this.abstractDownloader.cProject.getOrCreateCTreeList(force);
+		System.out.println("========\n CTrees "+treeList.size()+"\n========");
+		AbstractDownloader downloader = this.downloadTool.getDownloader();
+		LandingPageManager landingPageManager = abstractDownloader.getOrCreateLandingPageManager();
+		List<String> cTreeNameList = landingPageManager.getCTreeNameList();
+		System.out.println("LP "+cTreeNameList);
+		for (String cTreeName : cTreeNameList) {
+			CTree cTree = abstractDownloader.getCProject().getCTreeByName(cTreeName);
+			downloader.setCurrentTree(cTree);
+			AbstractLandingPage landingPage = landingPageManager.createCleanedLandingPage(cTree);
+			if (landingPage != null) {
+				try {
+					this.downloadLink(downloader, landingPage);
+				} catch (Exception e) {
+					System.err.println("Cannot get landing page: "+cTree+"; "+e.getMessage());
 				}
+			} else {
+				System.out.println("Null landingpage "+cTree.getName());
 			}
 		}
 	}
@@ -69,16 +80,36 @@ private static final Logger LOG = Logger.getLogger(FulltextManager.class);
 	 */
 	private void downloadLink(AbstractDownloader abstractDownloader, AbstractLandingPage landingPage)
 			throws IOException {
+		CurlDownloader curlDownloader = new CurlDownloader();
+		List<FulltextFormat> formats = downloadTool.getFulltextFormats();
+		if (formats.contains(FulltextFormat.html)) {
+			downloadCleanWriteHtml(abstractDownloader, landingPage, curlDownloader);
+		}
+		if (formats.contains(FulltextFormat.pdf)) {
+			downloadWritePDF(abstractDownloader, landingPage, curlDownloader);
+		}
+	}
+
+	private void downloadCleanWriteHtml(AbstractDownloader abstractDownloader, AbstractLandingPage landingPage, CurlDownloader curlDownloader) throws IOException {
 		String fullTextLink = landingPage.getHtmlLink();
 		System.out.print(" "+fullTextLink.substring(fullTextLink.lastIndexOf("/") + 1));
-		CurlDownloader curlDownloader = new CurlDownloader();
 		File rawHtmlFile = new File(abstractDownloader.currentTree.getDirectory(), "rawFullText.html");
 		curlDownloader.setOutputFile(rawHtmlFile);
 		curlDownloader.setUrlString(fullTextLink);
 		curlDownloader.run();
-		System.out.println("download: "+curlDownloader.getCommandList());
+		System.out.println("curlDownload: "+curlDownloader.getCommandList());
 		abstractDownloader.clean(rawHtmlFile);
 		cleanAndOutputScholarlyHTML(abstractDownloader, rawHtmlFile);
+	}
+
+	private void downloadWritePDF(AbstractDownloader abstractDownloader, AbstractLandingPage landingPage, CurlDownloader curlDownloader) throws IOException {
+//		System.out.println("DOWNLOAD PDF");
+		String fullTextLink = landingPage.getPDFLink();
+		System.out.println(" "+fullTextLink.substring(fullTextLink.lastIndexOf("/") + 1));
+		File pdfFile = new File(abstractDownloader.currentTree.getDirectory(), "fulltext.pdf");
+		curlDownloader.setOutputFile(pdfFile);
+		curlDownloader.setUrlString(fullTextLink);
+		curlDownloader.run();
 	}
 
 	private File cleanAndOutputScholarlyHTML(AbstractDownloader abstractDownloader, File file) {
@@ -89,13 +120,14 @@ private static final Logger LOG = Logger.getLogger(FulltextManager.class);
 			System.err.println("null body");
 			return null;
 		}
-		HtmlElement articleElement = abstractDownloader.getArticleElement(htmlHtml);
 		AbstractSubDownloader.cleanHtmlRemoveLinkCommentEtc(htmlHtml);
+		HtmlElement articleElement = abstractDownloader.getArticleElement(htmlHtml);
 		articleElement.detach();
+		XMLUtil.removeChildren(body);
 		body.appendChild(articleElement);
-		File cleanFile = new File(abstractDownloader.currentTree.getDirectory(), CTree.SCHOLARLY_HTML);
-		XMLUtil.writeQuietly(htmlHtml, cleanFile, 1);
-		return cleanFile;
+		File scholarlyFile = new File(abstractDownloader.currentTree.getDirectory(), CTree.SCHOLARLY_HTML);
+		XMLUtil.writeQuietly(htmlHtml, scholarlyFile, 1);
+		return scholarlyFile;
 	}
 
 

@@ -1,50 +1,92 @@
 package org.contentmine.ami.tools;
 
 import java.io.File;
-
+import java.util.Arrays;
+import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.contentmine.ami.tools.AMIImageTool;
+import org.contentmine.cproject.files.CProject;
+import org.contentmine.cproject.files.CTree;
+import org.contentmine.image.diagram.DiagramAnalyzerTest;
+import org.junit.Before;
 import org.junit.Test;
+
 
 /** test cleaning.
  * 
  * @author pm286
  *
  */
-public class AMIImageTest {
-	private static final String OLD_DEVTEST = "/Users/pm286/workspace/uclforest/devtest/";
+public class AMIImageTest extends AbstractAMITest {
+	private static final File OLD_DEVTEST = new File(SRC_TEST_AMI, "uclforest/devtest/");
+	private static final File FOREST_PLOT_SMALL = new File(SRC_TEST_AMI, "uclforest/forestplotssmall/");
+	private static final File OLD_SPSS = new File(SRC_TEST_AMI, "uclforest/spss/");
+	
+	
 	private static final Logger LOG = Logger.getLogger(AMIImageTest.class);
 	static {
 		LOG.setLevel(Level.DEBUG);
 	}
+	
+	boolean started = false;
 
+	@Before
+	public void startUp() {
+		if (!started) {
+			ensurePdfImages(FOREST_PLOT_SMALL);
+			ensurePdfImages(OLD_DEVTEST);
+			ensurePdfImages(OLD_SPSS); 
+			ensurePdfImages(new File(SRC_TEST_AMI, "battery10")); 
+		}
+		started = true;
+	}
+
+	private void ensurePdfImages(File dir) {
+		String cmd = "-p " + dir 
+			+ " pdfbox";
+		AMIPDFTool pdfTool = AMI.execute(AMIPDFTool.class, cmd);
+	}
+	
 	@Test
 	public void testHelp() {
-		new AMIImageTool().runCommands("--help");
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, "image --help");
+	}
+	
+	@Test
+	public void testParseSpecifics() {
+		String cmd = null;
+		AMIImageTool imageTool = null;
+		cmd = "-v image --minwidth 20";
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = " -v image --include maxpixf=\"0.25\"|minpix=\"500\" ";
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		System.out.println(imageTool.getIncludeMap());
 	}
 	
 	@Test
 	/** 
 	 */
 	public void testFilterTrees() throws Exception {
-		String args = 
-//				"-t /Users/pm286/workspace/uclforest/devtest/bowmann-perrottetal_2013"
-//				"-t /Users/pm286/workspace/uclforest/devtest/buzick_stone_2014_readalo"
-//				"-t /Users/pm286/workspace/uclforest/devtest/campbell_systematic_revie"
-//				"-t /Users/pm286/workspace/uclforest/devtest/case_systematic_review_ar"
-				"-t " + OLD_DEVTEST + "mcarthur_etal2012_cochran"
-//				"-t /Users/pm286/workspace/uclforest/devtest/puziocolby2013_co-operati"
-//				"-t /Users/pm286/workspace/uclforest/devtest/torgersonetal_2011dferepo"
-//				"-t /Users/pm286/workspace/uclforest/devtest/zhengetal_2016"
+		System.out.println("TREE " + new File(OLD_DEVTEST , "mcarthur_etal2012_cochran"));
+		String cmd = 
+//				"-t "+OLD_DEVTEST+"/bowmann-perrottetal_2013"
+//				"-t "+OLD_DEVTEST+"/buzick_stone_2014_readalo"
+//				"-t "+OLD_DEVTEST+"/campbell_systematic_revie"
+//				"-t "+OLD_DEVTEST+"/case_systematic_review_ar"
+				"-t " + new File(OLD_DEVTEST, "mcarthur_etal2012_cochran")
+//				"-t "+OLD_DEVTEST+"/puziocolby2013_co-operati"
+//				"-t "+OLD_DEVTEST+"/torgersonetal_2011dferepo"
+//				"-t "+OLD_DEVTEST+"/zhengetal_2016"
+				+ " --inputname raw"
+				+ " image"
 				+ " --sharpen sharpen4"
 				+ " --threshold 180"
 				+ " --binarize GLOBAL_ENTROPY"
 //				+ " --rotate 270"
 				+ " --priority SCALE"
 				;
-		new AMIImageTool().runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 	@Test
@@ -52,22 +94,24 @@ public class AMIImageTest {
 	 * mainly for visual inspection of results
 	 */
 	public void testBinarize() throws Exception {
-		String args = 
-//				"-t /Users/pm286/workspace/uclforest/devtest/bowmann-perrottetal_2013"
-//				"-t /Users/pm286/workspace/uclforest/devtest/buzick_stone_2014_readalo"
-//				"-t /Users/pm286/workspace/uclforest/devtest/campbell_systematic_revie"
-				"-t /Users/pm286/workspace/uclforest/devtest/case_systematic_review_ar"
-//				"-t /Users/pm286/workspace/uclforest/devtest/mcarthur_etal2012_cochran"
-//				"-t /Users/pm286/workspace/uclforest/devtest/puziocolby2013_co-operati"
-//				"-t /Users/pm286/workspace/uclforest/devtest/torgersonetal_2011dferepo"
-//				"-t /Users/pm286/workspace/uclforest/devtest/zhengetal_2016"
+		String cmd = 
+//				"-t "+OLD_DEVTEST+"/bowmann-perrottetal_2013"
+//				"-t "+OLD_DEVTEST+"/buzick_stone_2014_readalo"
+//				"-t "+OLD_DEVTEST+"/campbell_systematic_revie"
+				"-t "+OLD_DEVTEST+"/case_systematic_review_ar"
+//				"-t "+OLD_DEVTEST+"/mcarthur_etal2012_cochran"
+//				"-t "+OLD_DEVTEST+"/puziocolby2013_co-operati"
+//				"-t "+OLD_DEVTEST+"/torgersonetal_2011dferepo"
+//				"-t "+OLD_DEVTEST+"/zhengetal_2016"
 //				+ " --sharpen sharpen4"
+				+ " --inputname raw"
+                + " image"
 				+ " --threshold 180"
 				+ " --binarize BLOCK_OTSU"
 //				+ " --rotate 270"
 				+ " --priority SCALE"
 				;
-		new AMIImageTool().runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 	
 	@Test
@@ -75,7 +119,10 @@ public class AMIImageTest {
 	 * mainly for visual inspection of results
 	 */
 	public void testBinarizeMethods() throws Exception {
-		String args = "-t /Users/pm286/workspace/uclforest/devtest/case_systematic_review_ar --binarize ";
+		String cmd = "-t "+OLD_DEVTEST+"/case_systematic_review_ar"
+				+ " --inputname raw"
+				+ " image"
+				+ " --binarize ";
 		String[] methods = {
 			"GLOBAL_MEAN",
 			"GLOBAL_ENTROPY",
@@ -89,7 +136,7 @@ public class AMIImageTest {
 //			"GLOBAL_OTSU",   // spurious blocks
 		};
 		for (String method : methods) {
-			new AMIImageTool().runCommands(args + method);
+			AMIImageTool imageTool = AMI.execute(AMIImageTool.class,  cmd + method);
 		}
 	}
 
@@ -126,15 +173,24 @@ public class AMIImageTest {
 			"BLOCK_OTSU",
 		};
 		for (String name : names) {
-			String tree = "-t /Users/pm286/workspace/uclforest/devtest/";
+			String tree = "-t "+OLD_DEVTEST+"/";
 			String treename = tree + name;
-			String args = treename + " --binarize ";
+			String cmd = treename 
+					+ " --inputname raw"
+					+ " image --binarize ";
 			for (String method : methods) {
-//				new AMIImageTool().runCommands(args + method);
+//				AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd + method);
 			}
 			for (int threshold : new int[] {120, 140, 160, 180, 200, 220}) {
-				args = treename + " --monochrome --small --duplicate --sharpen sharpen4 --threshold "+threshold;
-				new AMIImageTool().runCommands(args);
+				cmd = treename + ""
+						+ " -v  image"
+						+ " --monochrome monochrome"
+						+ " --small small"
+						+ " --duplicate duplicate"
+						+ " --sharpen sharpen4"
+						+ " --threshold "+threshold;
+				System.out.println("<"+cmd+">");
+				AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 			}
 		}
 	}
@@ -147,10 +203,11 @@ public class AMIImageTest {
  */
 	@Test
 	public void testFilterProject() throws Exception {
-		String args = 
-				"-p /Users/pm286/workspace/uclforest/devtest/"
+		String cmd = 
+				"-p "+OLD_DEVTEST+"/"
+                + " image"
 				;
-		new AMIImageTool().runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 
@@ -158,19 +215,21 @@ public class AMIImageTest {
 	/** 
 	 */
 	public void testBinarizeTrees() throws Exception {
-		String args = 
-//				"-t /Users/pm286/workspace/uclforest/devtest/bowmann-perrottetal_2013"
-				"-t /Users/pm286/workspace/uclforest/devtest/buzick_stone_2014_readalo"
-//				"-t /Users/pm286/workspace/uclforest/devtest/campbell_systematic_revie"
-//				"-t /Users/pm286/workspace/uclforest/devtest/mcarthur_etal2012_cochran"
-//				"-t /Users/pm286/workspace/uclforest/devtest/puziocolby2013_co-operati"
-//				"-t /Users/pm286/workspace/uclforest/devtest/torgersonetal_2011dferepo"
-//				"-t /Users/pm286/workspace/uclforest/devtest/zhengetal_2016"
+		String cmd = 
+//				"-t "+OLD_DEVTEST+"/bowmann-perrottetal_2013"
+				"-t "+new File(OLD_DEVTEST, "buzick_stone_2014_readalo")
+//				"-t "+OLD_DEVTEST+"/campbell_systematic_revie"
+//				"-t "+OLD_DEVTEST+"/mcarthur_etal2012_cochran"
+//				"-t "+OLD_DEVTEST+"/puziocolby2013_co-operati"
+//				"-t "+OLD_DEVTEST+"/torgersonetal_2011dferepo"
+//				"-t "+OLD_DEVTEST+"/zhengetal_2016"
 //				+ " --binarize xLOCAL_MEAN"
+				+ " image"
+
 				+ " --threshold 180"
-				+ " --sharpen x"
+//				+ " --sharpen x"
 				;
-		new AMIImageTool().runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 
@@ -180,14 +239,16 @@ public class AMIImageTest {
 		This is a poor subpixel image which need thresholding and sharpening
 	 */
 	public void testScale() throws Exception {
-		String args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		String cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+				+ " --inputname raw"
+				+ " image"
 				+ " --scalefactor 0.5"
 				+ " --maxwidth 100"
 				+ " --maxheight 100"
-						
-				+ " --basename scale0_5";
-		new AMIImageTool().runCommands(args);
+				+ "";
+
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 	@Test
@@ -195,26 +256,34 @@ public class AMIImageTest {
 	 * rotate by multiples of 90 degrees
 	 */
 	public void testRotate() throws Exception {
-		String args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		String cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+				+ " --inputname raw"
+				+ " image"
 				+ " --rotate 90"
-				+ " --basename rot90";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+				+ "";
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+				+ " --inputname raw"
+				+ " image"
 				+ " --rotate 180"
-				+ " --basename rot180";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
-				+ " --rotate 270"
-				+ " --basename rot270";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+				+ "";
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
+				+ " --rotate 270";
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --rotate 0"
-				+ " --basename rot0";
-		new AMIImageTool().runCommands(args);
+//				+ " --inputname rot0"
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 	@Test
@@ -223,161 +292,188 @@ public class AMIImageTest {
 		This is a poor subpixel image which need thresholding and sharpening
 	 */
 	public void testThreshold() throws Exception {
-		String args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
-				+ " --basename noop";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		String cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
+				+ "";
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 160"
-				+ " --basename thresh160";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+//				+ " --inputname thresh160";
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 20"
-				+ " --basename thresh20"
+//				+ " --inputname thresh20"
 				;
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 30"
-				+ " --basename thresh30"
+//				+ " --inputname thresh30"
 				;
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 35"
-				+ " --basename thresh35"
+//				+ " --inputname thresh35"
 				;
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 40"
-				+ " --basename thresh40"
+//				+ " --inputname thresh40"
 				;
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 200"
 //				+ " --thinning none"
 //				+ " --binarize min_max"
-				+ " --basename threshold200";
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+				+ " --inputname threshold200";
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 220"
 //				+ " --thinning none"
 //				+ " --binarize min_max"
-				+ " --basename threshold220";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+//				+ " --inputname threshold220"
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 225"
 //				+ " --thinning none"
 //				+ " --binarize min_max"
-				+ " --basename threshold225";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+//				+ " --inputname threshold225"
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 230"
 //				+ " --thinning none"
 //				+ " --binarize min_max"
-				+ " --basename threshold230";
-		new AMIImageTool().runCommands(args);
-		args = 
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+//				+ " --inputname threshold230"
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = 
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 240"
 //				+ " --thinning none"
 //				+ " --binarize min_max"
-				+ " --basename threshold240";
-		new AMIImageTool().runCommands(args);
+//				+ " --inputname threshold240"
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 	
 	@Test
 	/** 
 	 */
 	public void testBitmapForestPlotsSmall() throws Exception {
-		String args = 
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		String cmd = 
+				"-p "+FOREST_PLOT_SMALL+""
+						+ " --inputname raw"
+				+ " image"
 				+ " --threshold 180"
 //				+ " --thinning none"
-				+ " --binarize entropy"
+//				+ " --binarize entropy"
 				;
-		new AMIImageTool().runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
-	
-//	@Test
-//	/** 
-//	 */
-//	public void testSharpen() throws Exception {
-//		String[] args = {
-//				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
-//				+ " --sharpen laplacian"
-//				};
-//		new AMIBitmapTool().runCommands(args);
-//	}
 	
 	@Test
 	/** 
 	 */
 	public void testSharpen() throws Exception {
-		String args =
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		String cmd =
+				"-p "+FOREST_PLOT_SMALL+""
+						+ " --inputname raw"
+				+ " image"
 				+ " --sharpen sharpen4"
-				+ " --basename sharpen4"
 				;
-		new AMIImageTool().runCommands(args);
-		args =
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd =
+				"-p "+FOREST_PLOT_SMALL+""
+						+ " --inputname raw"
+				+ " image"
 				+ " --sharpen sharpen8"
-				+ " --basename sharpen8"
 				;
-		new AMIImageTool().runCommands(args);
-		args =
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd =
+				"-p "+FOREST_PLOT_SMALL+""
+						+ " --inputname raw"
+				+ " image"
 				+ " --sharpen laplacian"
-				+ " --basename laplacian"
 				;
-		new AMIImageTool().runCommands(args);
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 	@Test
 	/** 
 	 */
 	public void testSharpenBoofcv() throws Exception {
-		String args =
-				"-t /Users/pm286/workspace/uclforest/forestplotssmall/cole"
+		String cmd =
+				"-t "+FOREST_PLOT_SMALL+"/cole"
+						+ " --inputname raw"
+				+ " image"
 				+ " --sharpen sharpen4"
-				+ " --basename sharpen4mean"
+//				+ " --inputname sharpen4mean"
 //				+ " --binarize local_mean"
 				;
-		new AMIImageTool().runCommands(args);
-		args =
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd =
+				"-p "+FOREST_PLOT_SMALL+""
+						+ " --inputname raw"
+				+ " image"
 				+ " --sharpen laplacian"
-				+ " --basename laplacian"
+//				+ " --inputname laplacian"
 				;
-		new AMIImageTool().runCommands(args);
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 	
 	@Test
 	/** 
 	 */
 	public void testSharpenThreshold1() throws Exception {
-		String args =
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		String cmd =
+				"-p "+FOREST_PLOT_SMALL+""
+						+ " --inputname raw"
+				+ " image"
 				+ " --sharpen sharpen8"
-				+ " --basename sharpen8otsu"
 				+ " --binarize block_otsu"
 
 				;
-		new AMIImageTool().runCommands(args);
-		args =
-				"-p /Users/pm286/workspace/uclforest/forestplotssmall"
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
+		cmd = ""
+				+ " --inputname raw"
+				+ " -p "+FOREST_PLOT_SMALL+""
+				+ " image"
 				+ " --sharpen laplacian"
-				+ " --basename laplacian180"
 				+ " --threshold 180"
 				;
-		new AMIImageTool().runCommands(args);
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 	@Test
@@ -385,87 +481,272 @@ public class AMIImageTest {
 	 * 
 	 */
 	public void testImageForestPlotsSmall() throws Exception {
-		String[] args = {
-				"-p", "/Users/pm286/workspace/uclforest/forestplotssmall",
-				"--monochrome", "true",
-				"--monochromedir", "monochrome",
-				"--minwidth", "100",
-				"--minheight", "100",
-				"--smalldir", "small",
-				"--duplicates", "true", 
-				"--duplicatedir", "duplicates",
-				};
-		AMIImageTool amiImage = new AMIImageTool();
-		amiImage.runCommands(args);
-	}
+		String cmd = ""
+				+ " -p "+FOREST_PLOT_SMALL
+				+ " --inputname raw"
+				+ " image"
+				+ " --monochrome monochrome"
+//				+ " --monochromedir monochrome"
+				+ " --minwidth 100"
+				+ " --minheight 100"
+//				+ " --smalldir small"
+				+ " --duplicate _delete"
+//				+ " --duplicatedir duplicates"
+				;
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
+	} 
 	
 	@Test
 	/** 
 	 * 
 	 */
 	public void testImagePanels() throws Exception {
-		// NYI
-		String userDir = System.getProperty("user.home");
-		File projectDir = new File(userDir, "projects/forestplots/spss");
-		String args = 
-				"-p "+projectDir+
-				" --minwidth 100"+
-				" --minheight 100"+
-				" --monochrome monochrome"+
-				" --small small"+
-				" --duplicate duplicate"
+		File projectDir = OLD_SPSS;
+		String cmd = 
+				"-p "+projectDir
+				+ " --inputname raw"
+				+ " image"
+				+ " --minwidth 100"
+				+ " --minheight 100"
+				+ " --monochrome monochrome"
+				+ " --small small"
+				+ " --duplicate duplicate"
 				;
-		AMIImageTool amiImage = new AMIImageTool();
-		amiImage.runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 	}
 
 	@Test
 	public void testAddBorders() {
-		String userDir = System.getProperty("user.home");
-		File projectDir = new File(userDir, "projects/forestplots/spss");
+		File projectDir = OLD_SPSS;
 		File treeDir = new File(projectDir, "PMC5502154");
-		String args = 
-				"-t "+treeDir+
-				" --scalefactor 2.0"+
-				" --erodedilate" +
-				" --borders 10 "
-				;
-		AMIImageTool amiImage = new AMIImageTool();
-		amiImage.runCommands(args);
-		
-	}
-
-	@Test
-	public void testImageBug() {
-		String userDir = System.getProperty("user.home");
-		File projectDir = new File(userDir, "projects/carnegiemellon");
-		File treeDir = new File(projectDir, "p2nax");
-		String args = 
+		String cmd = 
 				"-t "+treeDir
+						+ " --inputname raw"
+						+ " image"
+				+ " --scalefactor 2.0"
+				+ " --erodedilate" 
+				+ " --borders 10 "
 				;
-		AMIImageTool amiImage = new AMIImageTool();
-		amiImage.runCommands(args);
+		AMIImageTool imageTool = AMI.execute(AMIImageTool.class, cmd);
 		
 	}
 
 	@Test
-	public void testTemplate() {
-		String userDir = System.getProperty("user.home");
-		File projectDir = new File(userDir, "projects/carnegiemellon");
-		File treeDir = new File(projectDir, "p2nax");
-		String args = 
-				"-t "+treeDir+
-//				" --template" +
-				" --help"
+	public void testTreeList() {
+		String cmd = null;
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
+		CProject project = new CProject(cProjectDir);
+		List<String> treeNames = Arrays.asList(new String[] {
+				"PMC3776197",
+				"PMC4062906",
+				"PMC4709726",
+				"PMC5082456",
+				"PMC5082892",
+				"PMC5115307",
+				"PMC5241879",
+				"PMC5604389",
+				});
+		String treeNamesString = String.join(" ", treeNames);
+		cmd = "-p " + project
+				+ " -v"
+				+ " clean */svg/*"
+				+ " clean */pdfimages/*"
+				 ;
+		AbstractAMITool imageTool = AMI.execute(AMICleanTool.class, cmd);
+
+		cmd = "-p " + project
+				+ " -v"
+				+ " --inputname raw"
+				+ " --includetree " + treeNamesString
+				+ " pdfbox"
+				+ " image"
+//								+ " --includetree " + treeNamesString
+
+//				+ " clean */svg/*"
 				;
-		AMIImageTool amiImage = new AMIImageTool();
-		amiImage.runCommands(args);
-		
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		System.out.println("imageTool? " + imageTool);
+//		Assert.assertEquals("class", imageTool.getClass(), AMIImageTool.class);
+		cmd = "-p " + project
+				+ " -v"
+				+ " --inputname raw"
+				+ " --includetree " + treeNamesString
+				+ " image"
+//				+ " pdfbox"
+//				+ " --includetree " + treeNamesString
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		System.out.println("imageTool? " + imageTool);
+		cmd = "-p " + project
+				+ " -v"
+				+ " --inputname raw"
+				+ " --includetree " + treeNamesString
+				+ " image"
+//				+ " --small=small --monochrome=monochrome --duplicate=duplicate"
+				+ " -s -m -d"
+				;
+		imageTool = AMI.execute(AMIImageTool.class, cmd);
+		System.out.println("imageTool? " + imageTool);
+				
 	}
 
+	@Test
+	public void testImageAnalysis() {
+		String cmd = null;
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
+		CProject project = new CProject(cProjectDir);
+		List<String> treeNames = Arrays.asList(new String[] {
+//				"PMC3776197",
+				"PMC4062906",
+				"PMC4709726",
+//				"PMC5082456",
+//				"PMC5082892",
+//				"PMC5115307",
+//				"PMC5241879",
+//				"PMC5604389",
+				});
+		String treeNamesString = String.join(" ", treeNames);
+//		cmd = "-p " + project
+//				+ " -v"
+//				+ " clean */svg/*"
+//				+ " clean */pdfimages/*"
+//				 ;
+//		AbstractAMITool imageTool = AMI.execute(AMICleanTool.class, cmd);
 
+		cmd = "-p " + project
+				+ " -vv"
+				+ " --inputname raw"
+				+ " --includetree " + treeNamesString
+				+ " --output postertest"
+				+ " image"
+				+ " --posterize 4"
+				+ " --outputfiles binary freqplot freqplot2 frequencies orig poster"
+				+ "";
+
+		AbstractAMITool imageTool = AMI.execute(AMIImageTool.class, cmd);
+
+				
+	}
+
+	@Test
+	public void testOctree() {
+		String cmd = null;
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
+		CProject project = new CProject(cProjectDir);
+		List<String> treeNames = Arrays.asList(new String[] {
+//				"PMC3776197",
+				"PMC4062906",
+				"PMC4709726",
+//				"PMC5082456",
+//				"PMC5082892",
+//				"PMC5115307",
+//				"PMC5241879",
+//				"PMC5604389",
+				});
+		String treeNamesString = String.join(" ", treeNames);
+//		cmd = "-p " + project
+//				+ " -v"
+//				+ " clean */svg/*"
+//				+ " clean */pdfimages/*"
+//				 ;
+//		AbstractAMITool imageTool = AMI.execute(AMICleanTool.class, cmd);
+
+		cmd = "-p " + project
+				+ " -vv"
+				+ " --inputname raw"
+				+ " --includetree " + treeNamesString
+				+ " --output octree"
+				+ " image"
+				+ " --octree 8"
+//				+ " --merge 1"
+				+ " --outputfiles binary channels histogram "/*neighbours*/+ " octree"
+				+ "";
+
+		AbstractAMITool imageTool = (AbstractAMITool) AMI.execute(AMIImageTool.class, cmd);
+
+				
+	}
+
+	@Test
+	public void testOctreeAllIT() {
+		String cmd = null;
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
+		CProject project = new CProject(cProjectDir);
+		cmd = "-p " + project
+				+ " -v"
+				+ " clean **/pdfimages/*/octree **/pdfimages/*/raw_onull.png"
+				 ;
+		AMI.execute(AMICleanTool.class, cmd);
+
+		cmd = "-p " + project
+				+ " -vv"
+				+ " --inputname raw"
+				+ " --output octree"
+				+ " image"
+				+ " --octree 8"
+				+ " --outputfiles binary channels histogram html octree"
+				+ "";
+
+		AbstractAMITool imageTool = (AbstractAMITool) AMI.execute(AMIImageTool.class, cmd);
+
+				
+	}
+
+	//probably move to Pixel
+	@Test
+	public void testExtractCurves() {
+//		PMC4062906/	
+//		image.4.2.66_281.103_251 // XRD
+//		image.5.1.66_281.517_691 // voltammogram
+		String cmd = null;
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
+		CProject project = new CProject(cProjectDir);
+		CTree tree = project.getCTreeByName("PMC4062906");
+		cmd = "-t " + tree
+				+ " -v"
+				+ " clean **/pdfimages/*/octree **/pdfimages/*/raw_onull.png"
+				 ;
+		AMI.execute(AMICleanTool.class, cmd);
+
+		cmd = "-t " + tree
+				+ " -vv"
+				+ " --inputname raw"
+				+ " --output octree"
+				+ " image"
+				+ " --octree 8"
+				+ " --outputfiles binary channels histogram html octree"
+				+ " pixel"
+				+ "";
+
+		AbstractAMITool imageTool = (AbstractAMITool) AMI.execute(AMIPixelTool.class, cmd);
+
+	}
 	
+	/** write subimages
+	 * 
+	 */
+	@Test
+	public void testSubImages() {
+		String fileroot = "PMC4062906/pdfimages/image.5.1.66_281.517_691/raw";
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
 
+		DiagramAnalyzerTest.flattenAndWriteSubImages(fileroot, cProjectDir, new File("target/image/subimage/"), "png");
+	}
 
+	@Test
+	public void testExclude() {
+		String cmd = null;
+		File cProjectDir = new File(SRC_TEST_AMI, "battery10");
+		CProject project = new CProject(cProjectDir);
 
+		cmd = "-p " + project
+				+ " -vv"
+				+ " --inputname raw"
+				+ " image"
+				+ " --exclude match=/Users/pm286/ContentMine/publishers/"
+				+ "";
+
+		AbstractAMITool imageTool = (AbstractAMITool) AMI.execute(AMIPixelTool.class, cmd);
+
+	}
 }

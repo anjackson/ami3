@@ -3,7 +3,6 @@ package org.contentmine.ami.tools;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 import org.apache.log4j.Level;
@@ -17,12 +16,17 @@ import com.google.common.collect.HashMultiset;
 import com.google.common.collect.Multiset;
 
 import nu.xom.Element;
+import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
 /**
  * 
  * @author pm286
  *
  */
+@Command(name = "summary",
+		description = {
+		"Summarizes the specified dictionaries, genes, species and words."
+})
 public class AMISummaryTool extends AbstractAMITool {
 	private static final String SNIPPETS_TREE = "snippetsTree";
 	private static final String SNIPPETS = "snippets";
@@ -85,7 +89,7 @@ public class AMISummaryTool extends AbstractAMITool {
             description = "species to summarize")
     private List<String> speciesList = new ArrayList<>();
     
-    @Option(names = {"--output"},
+    @Option(names = {"--output-types"},
     		arity = "1..*",
             description = "output type/s")
     private List<OutputType> outputTypes = new ArrayList<>();
@@ -185,7 +189,7 @@ public class AMISummaryTool extends AbstractAMITool {
 
 	private void summarize(String plugin, String facet, SummaryType summaryType) {
 		LOG.debug(">> "+plugin+"/"+facet);
-		File summaryFile = new File(cProjectDirectory, plugin + "." + facet +"." + summaryType + "." + "xml");
+		File summaryFile = new File(getCProjectDirectory(), plugin + "." + facet +"." + summaryType + "." + "xml");
 		if (!summaryFile.exists()) {
 			LOG.warn("no summary file: " + summaryFile);
 			return;

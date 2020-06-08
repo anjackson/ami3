@@ -71,12 +71,11 @@ import picocli.CommandLine.Option;
  *
  */
 @Command(
-name = "ami-pixel", 
-aliases = "pixel",
-version = "ami-pixel 0.1",
-description = "analyzes bitmaps - generally binary, but may be oligochrome. Creates pixelIslands "
-)
-
+name = "pixel",
+description = {
+		"Analyzes bitmaps - generally binary, but may be oligochrome.",
+		"Creates pixelIslands."
+})
 public class AMIPixelTool extends AbstractAMITool implements HasImageDir {
 
 
@@ -310,11 +309,11 @@ public class AMIPixelTool extends AbstractAMITool implements HasImageDir {
 
     @Override
     protected boolean parseGenerics() {
-    	if (inputBasename == null) {
-    		inputBasename = RAW;
+    	if (getInputBasename() == null) {
+    		setInputBasename(RAW);
     	}
     	if (outputDirname == null) {
-    		outputDirname = inputBasename;
+    		outputDirname = getInputBasename();
     	}
     	return super.parseGenerics();
     }
@@ -499,9 +498,9 @@ public class AMIPixelTool extends AbstractAMITool implements HasImageDir {
 					} else {
 						int origRgb = image.getRGB(x, y) & 0x00ffffff;
 						if (origRgb == BLACK) {
-							image.setRGB(x, y, verbosity.length == 1 ? YELLOW : WHITE);
+							image.setRGB(x, y, verbosity().length == 1 ? YELLOW : WHITE);
 						} else if (origRgb == WHITE) {
-							image.setRGB(x, y, verbosity.length == 1 ? LIGHTGRAY : WHITE);
+							image.setRGB(x, y, verbosity().length == 1 ? LIGHTGRAY : WHITE);
 						} else {
 							
 						}

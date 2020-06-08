@@ -8,7 +8,7 @@ import java.util.List;
 import org.apache.http.client.HttpClient;
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
-import org.contentmine.ami.tools.AMIDictionaryTool.RawFileFormat;
+import org.contentmine.ami.tools.AMIDictionaryToolOLD.RawFileFormat;
 import org.contentmine.ami.tools.download.AbstractDownloader;
 import org.contentmine.ami.tools.download.AbstractLandingPage;
 import org.contentmine.ami.tools.download.AbstractMetadataEntry;
@@ -19,6 +19,7 @@ import org.contentmine.ami.tools.download.QueryManager;
 import org.contentmine.ami.tools.download.biorxiv.BiorxivDownloader;
 import org.contentmine.ami.tools.download.biorxiv.BiorxivLandingPage;
 import org.contentmine.ami.tools.download.biorxiv.BiorxivMetadataEntry;
+import org.contentmine.ami.tools.download.biorxiv.MedrxivDownloader;
 import org.contentmine.ami.tools.download.hal.HALDownloader;
 import org.contentmine.ami.tools.download.hal.HALLandingPage;
 import org.contentmine.ami.tools.download.hal.HALMetadataEntry;
@@ -33,25 +34,19 @@ import org.contentmine.cproject.files.CTree;
 
 import picocli.CommandLine.Command;
 import picocli.CommandLine.Option;
-/**
- * 
+
+/** see org.contentmine.ami.tools.download.AbstractDownloader for mechanism and options
+ *
  * @author pm286
  *
  */
 
 @Command(
-name = "ami-download", 
-aliases = "download",
-version = "ami-download 0.1",
-description = "downloads content from remote site. Maybe a wrapper for getpapers, curl, etc."
-) 
-
-/** see org.contentmine.ami.tools.download.AbstractDownloader for mechanism and options
- * 
- * @author pm286
- *
- */
-
+name = "download",
+description = {
+		"Downloads content from remote site.",
+		"Maybe a wrapper for getpapers, curl, etc."
+})
 public class AMIDownloadTool extends AbstractAMITool {
 
 	private static final Logger LOG = Logger.getLogger(AMIDownloadTool.class);
@@ -69,6 +64,11 @@ public class AMIDownloadTool extends AbstractAMITool {
 				new HALDownloader(),
 				new HALMetadataEntry(),
 				new HALLandingPage()
+				),
+		medrxiv(
+				new MedrxivDownloader(),
+				new BiorxivMetadataEntry(),
+				new BiorxivLandingPage()
 				),
 		osf(
 				new OSFDownloader(),
@@ -135,11 +135,23 @@ public class AMIDownloadTool extends AbstractAMITool {
 		clean
 	}
 
-    @Option(names = {"--landingpage"},
-    		arity = "1",
-            description = "")
-    private String landingPage;
+	public enum FulltextFormat {
+		html,
+		pdf,  
+		suppinfo,
+		xml,
+	}
 
+    @Option(names = {"--fulltext"},
+    		arity = "1..*",
+            description = "fulltext content (can include Supplemental Info (${COMPLETION-CANDIDATES})")
+    private List<FulltextFormat> fulltextFormats = new ArrayList<>();
+
+//    @Option(names = {"--landingpage"},
+//    		arity = "1",
+//            description = "")
+//    private String landingPage;
+//
     @Option(names = {"--limit"},
     		arity = "1",
             description = "max hits to download (default 200), set to (pages * pagesize) if both set ")
@@ -159,7 +171,7 @@ public class AMIDownloadTool extends AbstractAMITool {
     @Option(names = {"--pagesize"},
     		arity = "1",
             description = "size of hit page, no default (often set by service)")
-    private Integer pagesize = null;
+    private Integer pagesize = 20;
 
     @Option(names = {"--query"},
     		arity = "1..*",
@@ -168,14 +180,23 @@ public class AMIDownloadTool extends AbstractAMITool {
 
     @Option(names = {"--resultset"},
     		arity = "1..*",
-            description = "resultSets to download (filenames, experimental). If omitted, "
+            description = "hitLists to download (filenames, experimental). If omitted, "
             		+ "created by programs")
-	public List<String> resultSetList = new ArrayList<>();
+	public List<String> hitListList = new ArrayList<>();
 
     @Option(names = {"--site"},
     		arity = "1",
             description = "site to search")
-    private SearchSite site = null;
+    private SearchSite site = SearchSite.biorxiv;
+
+	@Option(names = {"--rawfiletypes"},
+			arity = "1..*",
+			split = ",",
+			description = "Suffixes of included files (${COMPLETION-CANDIDATES}): "
+					+ "can be concatenated with commas ")
+	protected List<RawFileFormat> rawFileFormats = new ArrayList<>();
+
+	/** moved to superclass */
 
     private File dictionaryFile;
 	private InputStream dictionaryInputStream;
@@ -198,7 +219,6 @@ public class AMIDownloadTool extends AbstractAMITool {
     	new AMIDownloadTool().runCommands(args);
     }
 
-
     @Override
 	protected boolean parseGenerics() {
     	makeCProjectDirectory = true;
@@ -207,9 +227,9 @@ public class AMIDownloadTool extends AbstractAMITool {
     		throw new RuntimeException("Must give project");
     	}
     	
-    	if (output == null) {
-    		output = "scraped/";
-    		LOG.info("set output to: " + output);
+    	if (output() == null) {
+    		output("scraped/");
+    		LOG.info("set output to: " + output());
     	}
 //		System.out.println("fileformats     " + rawFileFormats);
 		System.out.println("project         " + cProject);
@@ -224,14 +244,16 @@ public class AMIDownloadTool extends AbstractAMITool {
 			limit = pageList.size() * pagesize;
 		}
 		normalizePageList();
-		System.out.println("landingPage        " + landingPage);
+//		System.out.println("landingPage        " + landingPage);
+		System.out.println("fulltext           " + fulltextFormats);
 		System.out.println("limit              " + limit);
 		System.out.println("metadata           " + metadata);
 		System.out.println("pages              " + pageList);
 		System.out.println("pagesize           " + pagesize);
 		System.out.println("query              " + queryList);
-		System.out.println("resultSetList      " + resultSetList);
+		System.out.println("hitListList      " + hitListList);
 		System.out.println("site               " + site);
+		System.out.println("file types          " + rawFileFormats);
 		System.out.println();
 	}
 
@@ -239,19 +261,33 @@ public class AMIDownloadTool extends AbstractAMITool {
     protected void runSpecifics() {
 		downloader = createDownloader();
 
-		// Get and ouptut resultSets
+		// Get and ouptut hitLists
 		QueryManager queryManager = downloader.getOrCreateQueryManager();
-		resultSetList = queryManager.searchAndDownloadResultSet();
+		hitListList = queryManager.searchAndDownloadHitList();
+		int size = hitListList.size();
+		System.out.println(""
+				+ "  ========\nHitList: "+size+""
+				+ "\n creates hitList[1.."+size+"][.clean].html"
+				+ "\n and <per-ctree>/scrapedMetadata.html"
+				+ "\n========");
 		
 		LandingPageManager landingPageManager = downloader.getOrCreateLandingPageManager();
 		landingPageManager.downloadLandingPages();
 		
-		FulltextManager fulltextManager = downloader.getOrCreateFulltextManager();
-		fulltextManager.downloadFullTextAndRelatedFiles();
+		System.out.println("========\nadds LandingPages: "+landingPageManager.size()+"\n========");
 		
-		List<AbstractMetadataEntry> metadataEntryList = downloader.getMetadataEntryList();
-		FullFileManager fullFileManager = downloader.getOrCreateFullFileManager();
-		fullFileManager.downloadHtmlPages(metadataEntryList);
+		FulltextManager fulltextManager = downloader.getOrCreateFulltextManager();
+		fulltextManager.downloadFullTextAndRelatedFilesFromLandingPages();
+//		System.out.println("========\nFulltext: "+fulltextManager+"\n========");
+		System.out.println("========\nFulltext: "+"finished"+"\n========");
+		
+		boolean downloadHtml = false;
+		if (downloadHtml) {
+			List<AbstractMetadataEntry> metadataEntryList = downloader.getMetadataEntryList();
+			FullFileManager fullFileManager = downloader.getOrCreateFullFileManager();
+			fullFileManager.downloadHtmlPages(metadataEntryList);
+			System.out.println("========\nFullfile / metadata: "+metadataEntryList.size()+"\n========");
+		}
     }
 
 	private AbstractDownloader createDownloader() {
@@ -298,7 +334,7 @@ public class AMIDownloadTool extends AbstractAMITool {
 		return cTree;
 	}
 
-	public int getPageSize() {
+	public Integer getPageSize() {
 		return pagesize;
 	}
 
@@ -319,7 +355,11 @@ public class AMIDownloadTool extends AbstractAMITool {
 	}
 	
 	public List<String> getResultsSetList() {
-		return resultSetList;
+		return hitListList;
+	}
+
+	public List<FulltextFormat> getFulltextFormats() {
+		return fulltextFormats;
 	}
 
 	public List<RawFileFormat> getRawFileFormats() {

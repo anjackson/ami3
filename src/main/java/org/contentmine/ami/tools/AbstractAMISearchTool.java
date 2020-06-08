@@ -123,6 +123,11 @@ public abstract class AbstractAMISearchTool extends AbstractAMITool {
             description = " lookup wikidata biblographic object")
     protected Boolean wikidataBiblio = false;
 
+	@Option(names = {"--no-oldstyle"},
+			description = "(A) use oldstyle style of processing (project based) for unconverted tools; "
+					+ "new style is per tree")
+	protected boolean oldstyle = true;
+
 	protected AbstractSearchArgProcessor abstractSearchArgProcessor;
 	protected WordCollectionFactory wordCollectionFactory;
 	
@@ -146,12 +151,13 @@ public abstract class AbstractAMISearchTool extends AbstractAMITool {
 
     @Override
 	protected void parseSpecifics() {
-//		System.out.println("dictionaryList       " + dictionaryOption.getDictionaryList());
-		System.out.println("oldstyle             " + oldstyle);
-		System.out.println("strip numbers        " + stripNumbers);
-		System.out.println("wordCountRange       " + wordCountRange);
-		System.out.println("wordLengthRange      " + wordLengthRange);
-		System.out.println();
+    	super.parseSpecifics();
+////		System.out.println("dictionaryList       " + dictionaryOption.getDictionaryList());
+//		System.out.println("oldstyle             " + oldstyle);
+//		System.out.println("strip numbers        " + stripNumbers);
+//		System.out.println("wordCountRange       " + wordCountRange);
+//		System.out.println("wordLengthRange      " + wordLengthRange);
+//		System.out.println();
 	}
 
     @Override
@@ -159,6 +165,7 @@ public abstract class AbstractAMISearchTool extends AbstractAMITool {
     	abstractSearchArgProcessor = getOrCreateSearchProcessor();
     	
     	if (oldstyle) {
+    		// this is the complete command including "words" and "search"
         	String cmd = buildCommandFromBuiltinsAndFacets();
         	LOG.trace("cmd: "+cmd);
     	} else {
@@ -168,17 +175,21 @@ public abstract class AbstractAMISearchTool extends AbstractAMITool {
     	
     	if (false) {
     	} else if (oldstyle) {
-    		LOG.debug("old style search command); change");
+    		LOG.debug("old style search command); to be changed");
 			if (cProject == null) {
 				DebugPrint.errorPrintln(Level.ERROR, "requires cProject");
 			} else if (projectExists(cProject)) {
 				processProject();
 			}
     	} else if (processTrees()) { 
+    		LOG.debug("New style, processTrees()");
     		// 
     	}
     }
 
+    /** this prepares but ? does not run
+     * 
+     */
 	protected void createWordListInWordCollectionFactory() {
     	abstractSearchArgProcessor = getOrCreateSearchProcessor();
 		wordCollectionFactory = abstractSearchArgProcessor.getOrCreateWordCollectionFactory();
@@ -196,6 +207,15 @@ public abstract class AbstractAMISearchTool extends AbstractAMITool {
 	
 	protected abstract void runProjectSearch();
 
+/**
+ * 			commandProcessor.parseCommands(cmdList);
+			commandProcessor.runNormaIfNecessary();
+			commandProcessor.runJsonBibliography();
+			commandProcessor.runLegacyPluginOptions(this);
+			commandProcessor.createDataTables(wikidataBiblio);
+
+ * @param cmd
+ */
 	protected void runLegacyCommandProcessor(String cmd) {
 //		System.out.println("SEARCH running legacy processors");
 		try {

@@ -1,5 +1,6 @@
 package org.contentmine.ami.tools;
 
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.util.Collections;
 import java.util.List;
@@ -8,6 +9,9 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.cproject.files.CTree;
 import org.contentmine.cproject.util.CMineGlobber;
+import org.contentmine.image.ImageUtil;
+
+import jline.internal.Log;
 
 
 public class ImageDirProcessor {
@@ -54,6 +58,9 @@ public class ImageDirProcessor {
 			System.out.println(" >>>>> imageDirs: "+imageDirs.size());
 			Collections.sort(imageDirs);
 			for (File imageDir : imageDirs) {
+				if (excludeImages(imageDir)) {
+					continue;
+				}
 				try {
 					processImageDir(imageDir);
 				} catch (Exception e) {
@@ -66,6 +73,23 @@ public class ImageDirProcessor {
 			processRawImageDir(rawImageDir);
 		}
 		return true;
+	}
+
+	private boolean excludeImages(File imageDir) {
+		File imageFile = new File(imageDir, "raw.png");
+		BufferedImage image = null;
+		try {
+			image = ImageUtil.readImageQuietly(imageFile);
+		} catch (Exception e) {
+			System.err.println("Cannot read file: "+e.getMessage());
+			return false;
+		}
+		if (((AMIImageTool)amiTool).getOrCreateCommonImageSet()
+			.contains(ImageUtil.createSimpleHash(image))) {
+			System.out.println("Exclude common file: "+imageFile.getParentFile().getName());
+			return true;
+		}
+		return false;
 	}
 
 	private void processRawImageDir(File rawImageDir) {
@@ -92,6 +116,10 @@ public class ImageDirProcessor {
 
 	/** this calls back to amiTool */
 	private void processInputName(File imageDir, String inputname) {
+		if (inputname == null) {
+			Log.warn("no inputname to processImage");
+			return;
+		}
 		HasImageDir hasImageDir = (HasImageDir)amiTool;
 		File imageFile = hasImageDir.getImageFile(imageDir, inputname);
 		amiTool.setInputBasename(inputname);

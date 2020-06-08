@@ -40,13 +40,10 @@ import picocli.CommandLine.Option;
  *
  */
 @Command(
-name = "ami-svg", 
-aliases = "svg",
-version = "ami-svg 0.1",
-description = "Takes raw SVG from PDF2SVG and converts into structured HTML and higher graphics primitives."
-)
-
-
+name = "svg",
+description = {
+		"Takes raw SVG from PDF2SVG and converts into structured HTML and higher graphics primitives."
+})
 public class AMISVGTool extends AbstractAMITool {
 	private static final Logger LOG = Logger.getLogger(AMISVGTool.class);
 	static {
@@ -134,6 +131,11 @@ public class AMISVGTool extends AbstractAMITool {
     		description = "output pages with SVG vectors to <directory>")
     private String vectorDirname;
 
+	@Option(names = {"--logfile"},
+			description = "(A) log file for each tree/file/image analyzed. "
+	)
+	public String logfile;
+
     public static Pattern PAGE_EXTRACT = Pattern.compile(".*\\/fulltext\\-page\\.(\\d+)\\.svg");
 
 	private List<Pattern> patternList;
@@ -167,6 +169,7 @@ public class AMISVGTool extends AbstractAMITool {
 		System.out.println("tidyList             " + tidyList);
 		System.out.println("vectorLogfilename    " + vectorLog);
 		System.out.println("vectorDir            " + vectorDirname);
+		System.out.println("logfile             " + logfile);
 		System.out.println();
 	}
 

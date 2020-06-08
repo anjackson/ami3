@@ -1,6 +1,7 @@
 package org.contentmine.cproject.util;
 
 import java.io.File;
+
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
@@ -249,7 +250,20 @@ public class CMineGlobber {
 	 */
 	public static List<File> listGlobbedFilesQuietly(File directory, String glob) {
 		List<File> files = new ArrayList<File>();
-		CMineGlobber globber = new CMineGlobber(glob, directory);
+		CMineGlobber globber = new CMineGlobber(glob, directory).setUseDirectories(true);
+		files = globber.listFiles();
+		return files;
+	}
+
+	/** creates Globber from directory and regex. Fails quietly.
+	 * 
+	 * @param directory
+	 * @param regex 
+	 * @return
+	 */
+	public static List<File> listRegexedFilesQuietly(File directory, String regex) {
+		List<File> files = new ArrayList<File>();
+		CMineGlobber globber = new CMineGlobber().setRegex(regex).setLocation(directory);
 		files = globber.listFiles();
 		return files;
 	}
@@ -354,11 +368,11 @@ public class CMineGlobber {
 	/** get sorted list of descendant files with given suffix.
 	 * 
 	 * @param dir
-	 * @param suffix (without '.')
+	 * @param noDotSuffix (without '.')
 	 * @return sorted list 
 	 */
-	public static List<File> listSortedDescendantFiles(File dir, String suffix) {
-		List<File> listFiles = new CMineGlobber().setGlob("**/*." + suffix).setRecurse(true).setLocation(dir).listFiles();
+	public static List<File> listSortedDescendantFiles(File dir, String noDotSuffix) {
+		List<File> listFiles = new CMineGlobber().setGlob("**/*." + noDotSuffix).setRecurse(true).setLocation(dir).listFiles();
 		Collections.sort(listFiles);
 		return listFiles;
 	}

@@ -8,7 +8,8 @@ import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.ami.tools.download.AbstractDownloader;
 import org.contentmine.ami.tools.download.AbstractMetadataEntry;
-import org.contentmine.ami.tools.download.ResultSet;
+import org.contentmine.ami.tools.download.HitList;
+import org.contentmine.ami.tools.download.QueryManager.QuerySyntax;
 import org.contentmine.cproject.files.CProject;
 import org.contentmine.eucl.xml.XMLUtil;
 import org.contentmine.graphics.html.HtmlBody;
@@ -17,7 +18,7 @@ import org.contentmine.graphics.html.HtmlHtml;
 
 import nu.xom.Element;
 
-/** extracts from biorxiv pages
+/** extracts from sciencedirect pages
  * 
  * 
 
@@ -29,6 +30,7 @@ public class SDDownloader extends AbstractDownloader {
 	static {
 		LOG.setLevel(Level.DEBUG);
 	}
+	/**	https://www.sciencedirect.com/search?qs=n95 */
 	public static final String SD_BASE = "https://sciencedirect.com/";
 	public static final String SD_HOST = "https://sciencedirect.com/";
 	public static final String SD_SEARCH = SD_BASE+"/search/";  /* NOT YET CERTAIN */
@@ -50,7 +52,7 @@ public class SDDownloader extends AbstractDownloader {
 	 <li class="first odd search-result result-jcode-biorxiv search-result-highwire-citation">
 	 * @return 
 	 */
-	public ResultSet createResultSet(String result) {
+	public HitList createHitList(String result) {
 		/**
 		<ol class="search-result-wrapper">
 		<li class="ResultItem col-xs-24 push-m" data-doi="10.1016/j.worlddev.2019.104864">
@@ -90,7 +92,7 @@ public class SDDownloader extends AbstractDownloader {
 	}
 
 //	@Override
-//	protected File cleanAndOutputResultSetFile(File file) {
+//	protected File cleanAndOutputHitListFile(File file) {
 //		throw new RuntimeException("NYI");
 //	}
 //
@@ -120,13 +122,19 @@ public class SDDownloader extends AbstractDownloader {
 	}
 
 	@Override
-	protected String getResultSetXPath() {
-		throw new RuntimeException("SD getResultSetXPath NYI");
+	protected String getHitListXPath() {
+		throw new RuntimeException("SD getHitListXPath NYI");
 	}
 
 	@Override
 	protected AbstractMetadataEntry createSubclassedMetadataEntry() {
 		throw new RuntimeException("SD createSubclassedMetadataEntry NYI");
+	}
+
+	@Override 
+	protected QuerySyntax getQuerySyntax() {
+		throw new RuntimeException ("SDDownloader NYI");
+//		return QuerySyntax.url;
 	}
 
 	

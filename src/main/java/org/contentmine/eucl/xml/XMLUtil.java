@@ -1501,15 +1501,22 @@ public abstract class XMLUtil implements XMLConstants {
 		}
 	}
 
+	/** removes DTD so parsing doesn't fail. Normally recommended */
 	public static Document parseQuietlyToDocumentWithoutDTD(File file) {
 		Document doc = null;
-		try {
-			String s = IOUtils.toString(new FileInputStream(file));
+		try (FileInputStream fis = new FileInputStream(file)) {
+			String s = IOUtils.toString(fis);
 			doc = XMLUtil.stripDTDAndOtherProblematicXMLHeadings(s);
 		} catch (IOException e) {
 			throw new RuntimeException(e);
 		}
 		return doc;
+	}
+
+	/** removes DTD so parsing doesn't fail. Normally recommended */
+	public static Element parseQuietlyToRootElementWithoutDTD(File file) {
+		Document doc = parseQuietlyToDocumentWithoutDTD(file);
+		return doc == null ? null : doc.getRootElement();
 	}
 
 	/** checks that attribute names are in allowed list.

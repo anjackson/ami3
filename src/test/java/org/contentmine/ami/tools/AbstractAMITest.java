@@ -11,6 +11,7 @@ import org.junit.Test;
 public class AbstractAMITest {
 	
 	public static File _HOME = new File("/Users/pm286");
+	public static final File NEW_PROJECTS = new File(_HOME, "projects/");
 	public static File CMDEV = new File(_HOME, "workspace/cmdev");
 	public static final String CONTENTMINE = "ami3/src/test/resources/org/contentmine";
 	public static File CMINE = new File(CMDEV, CONTENTMINE);
@@ -25,10 +26,10 @@ public class AbstractAMITest {
 	
 	
 	public static File WORKSPACE = new File(_HOME, "workspace/");
-	public static File PROJECTS = WORKSPACE.exists() ? new File(WORKSPACE, "projects/") : new File(_HOME, "projects/");
+	public static File PROJECTS = WORKSPACE.exists() ? new File(WORKSPACE, "projects/") : NEW_PROJECTS;
 	public static File CANADA = new File(PROJECTS, "canada/");
-	public static File CEV = new File(PROJECTS, "CEVOpen/").exists() ? new File(PROJECTS, "CEVOpen/") : new File(PROJECTS, "CEV/");
-	public static File CEV_SEARCH = new File(CEV, "searches/");
+	public static File CEV_OPEN = new File(PROJECTS, "CEVOpen/").exists() ? new File(PROJECTS, "CEVOpen/") : new File(PROJECTS, "CEV/");
+	public static File CEV_SEARCH = new File(CEV_OPEN, "searches/");
 	public static File CLIMATE = new File(PROJECTS, "climate/");
 	public static File CLIM_SEARCH = new File(CLIMATE, "searches/");
 	public static File CLIMATE200 = new File(CLIMATE, "climate200");

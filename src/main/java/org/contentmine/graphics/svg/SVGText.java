@@ -289,7 +289,7 @@ public class SVGText extends SVGElement {
      *
      * @return Node
      */
-    public Node copy() {
+    public nu.xom.Element copy() {
         return new SVGText(this, TAG);
     }
     
@@ -1796,7 +1796,8 @@ But for all other weights a numerical range from 100 to 900 is used. One of the 
 			double fontSize = this.getFontSize();
 			// apparently they may be the same? 
 			if (x1 < x0) {
-				System.err.println("xArray ooo("+i+")");
+//				System.err.println("xArray ooo("+i+")"); 
+				System.err.print("!");
 //				LOG.error("xArray out of order at: " + i + "/" + xArray);
 				return;
 			}

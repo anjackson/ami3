@@ -8,8 +8,6 @@ import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 
-import javax.imageio.ImageIO;
-
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.eucl.euclid.Int2Range;
@@ -17,7 +15,6 @@ import org.contentmine.eucl.euclid.IntArray;
 import org.contentmine.eucl.euclid.IntRange;
 import org.contentmine.eucl.euclid.IntSet;
 import org.contentmine.eucl.euclid.RealArray;
-import org.contentmine.eucl.euclid.Util;
 import org.contentmine.eucl.euclid.RealArray.Filter;
 import org.contentmine.graphics.svg.SVGG;
 import org.contentmine.graphics.svg.SVGSVG;
@@ -93,6 +90,7 @@ RGB to HSV:
  */
 public class ColorAnalyzer {
 
+	private static final String CHANNEL = "channel";
 	private static final Logger LOG = Logger.getLogger(ColorAnalyzer.class);
 	static {
 		LOG.setLevel(Level.DEBUG);
@@ -138,6 +136,25 @@ public class ColorAnalyzer {
 	private boolean includeGray;
 	private BufferedImage grayImage;
 
+	public ColorAnalyzer() {
+		setDefaults();
+	}
+	
+	private void setDefaults() {
+		// pixel-svg options 
+		// flattening
+		this.setStartPlot(1);
+		this.setMaxPixelSize(1000000);
+		this.setIntervalCount(4);
+		this.setEndPlot(15);
+		this.setMinPixelSize(300);
+		// saturate/gray
+		this.setMinGray(32);
+		this.setMaxGray(224);
+		this.setMaxGrayChroma(32);
+
+	}
+
 	public int getMinGray() {
 		return minGray;
 	}
@@ -172,25 +189,6 @@ public class ColorAnalyzer {
 	public ColorAnalyzer setIncludeGray(boolean includeGray) {
 		this.includeGray = includeGray;
 		return this;
-	}
-
-	public ColorAnalyzer() {
-		setDefaults();
-	}
-	
-	private void setDefaults() {
-		// pixel-svg options 
-		// flattening
-		this.setStartPlot(1);
-		this.setMaxPixelSize(1000000);
-		this.setIntervalCount(4);
-		this.setEndPlot(15);
-		this.setMinPixelSize(300);
-		// saturate/gray
-		this.setMinGray(32);
-		this.setMaxGray(224);
-		this.setMaxGrayChroma(32);
-
 	}
 
 	public int getMinChroma() {
@@ -373,7 +371,7 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 		ImageIOUtil.writeImageQuietly(currentImage, new File("target/flatten/after.png"));
 	}
 	
-	public void analyzeFlattenedColours() {
+	public void analyzeTransformedColours() {
 		getOrCreateColorSet();
 		createSortedFrequencies();
 		createPixelListsFromColorValues();
@@ -384,14 +382,11 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 		if (outputDirectory != null) {
 			writePixelListsAsSVG();
 			outputImageFilename = "main.png";
-			writeMainImage(outputImageFilename);
+			ImageIOUtil.writeImageQuietly(currentImage, new File(outputDirectory, outputImageFilename));
 		}
 	}
 
-	private void writeMainImage(String outputName) {
-		ImageIOUtil.writeImageQuietly(currentImage, new File(outputDirectory, outputName));
-	}
-
+	
 	private void writePixelListsAsSVG() {
 		for (int i = 0; i < pixelListList.size(); i++) {
 			String hexColorS = Integer.toHexString(colorValues.elementAt(i));
@@ -414,9 +409,12 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 	}
 
 	
+	/** very slow */
 	private void createPixelListsFromColorValues() {
 		pixelListList = new ArrayList<PixelList>();
+		System.out.println("colours: "+colorValues.size());
 		for (int i = 0; i < colorValues.size(); i++) {
+			/*if (i % 100 == 0 )*/ System.out.print(".");
 			int colorValue = colorValues.elementAt(i);
 			int colorCount = colorCounts.elementAt(i);
 			String hex = Integer.toHexString(colorValue);
@@ -455,7 +453,7 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 		setEndPlot(15);
 		setMinPixelSize(300);
 		flattenImage();
-		analyzeFlattenedColours();
+		analyzeTransformedColours();
 		return this;
 	}
 
@@ -485,7 +483,7 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 			currentImage = ImageUtil.averageImageColors(currentImage);
 		}
 		this.flattenImage();
-		this.analyzeFlattenedColours();
+		this.analyzeTransformedColours();
 
 	}
 
@@ -528,15 +526,15 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 		return colorFrequenciesMap;
 	}
 
-	public BufferedImage mergeMinorColours(BufferedImage image) {
+	public BufferedImage mergeMinorColoursFromNeighbouringMap(BufferedImage image) {
 		readImage(image);
 		getOrCreateNeighbouringColorMap();
 		BufferedImage newImage = ImageUtil.deepCopy(image);
-		for (int i = 0; i < width; i++) {
-			for (int j = 0; j < height; j++) {
-				RGBColor rgbColor = new RGBColor(image.getRGB(i, j));
+		for (int jcol = 0; jcol < width; jcol++) {
+			for (int irow = 0; irow < height; irow++) {
+				RGBColor rgbColor = new RGBColor(image.getRGB(jcol, irow));
 				RGBColor rgbColor1 = rgbNeighbourMap.getMoreFrequentRGBNeighbour(colorFrequenciesMap, rgbColor);
-				newImage.setRGB(i, j, rgbColor1.getRGBInteger());
+				newImage.setRGB(jcol, irow, rgbColor1.getRGBInteger());
 			}
 		}
 		return newImage;
@@ -810,6 +808,39 @@ public ColorAnalyzer setSaturate(boolean saturate) {
 			ImageIOUtil.writeImageQuietly(grayImage, outfile);
 			LOG.debug("wrote: "+outfile);
 		}
+	}
+
+	public void writeImagesForColors(File outdir, int minPixels) {
+		ColorFrequenciesMap colorFrequencies = getOrCreateColorFrequenciesMap();
+		for (RGBColor color : colorFrequencies.keySet()) {
+			String hex = color.getHex().replaceAll("#", "");
+			Integer count = colorFrequencies.get(color);
+			if (count > minPixels) {
+				System.out.println("Freq: "+hex+": "+count);
+				BufferedImage image = getImage(color);
+				File hexFile = new File(outdir, CHANNEL+"."+hex+".png");
+				ImageIOUtil.writeImageQuietly(image, hexFile);
+			}
+		}
+	}
+
+	public BufferedImage repeatedlyMergeMinorColors(BufferedImage image, int nMerge) {
+		for (int i = 0; i < nMerge; i++) {
+			image = mergeMinorColoursFromNeighbouringMap(image);
+		}
+		return image;
+	}
+
+	public void writeColourFrequencyPlot(File output) {
+		SVGG g = createColorFrequencyPlot();
+		SVGSVG.wrapAndWriteAsSVG(g, new File(output, "colors.orig.svg"));
+	}
+
+	public void writeBinaryImage(File outputDir) {
+		// write binary image
+		BufferedImage image1 = getBinaryImage();
+		File file = new File(outputDir, "binary.png");
+		ImageIOUtil.writeImageQuietly(image1, file);
 	}
 
 

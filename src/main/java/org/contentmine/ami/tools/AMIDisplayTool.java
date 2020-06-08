@@ -18,6 +18,7 @@ import org.contentmine.eucl.euclid.Vector2;
 import org.contentmine.eucl.xml.XMLUtil;
 import org.contentmine.graphics.html.HtmlA;
 import org.contentmine.graphics.html.HtmlBody;
+import org.contentmine.graphics.html.HtmlElement;
 import org.contentmine.graphics.html.HtmlHtml;
 import org.contentmine.graphics.html.HtmlImg;
 import org.contentmine.graphics.html.HtmlLi;
@@ -46,14 +47,12 @@ import picocli.CommandLine.Option;
 
 
 @Command(
-name = "ami-display", 
-aliases = "display",
-version = "ami-display 0.1",
-description = "	Displays files in CTree. Uses HTML to aggregate several files from (say) same imageDir."
+name = "display",
+description = {
+		"Displays files in CTree.",
+		"Uses HTML to aggregate several files from (say) same imageDir."
 		+ "Also creates aggregated links in parent directory."
-		
-)
-
+})
 public class AMIDisplayTool extends AbstractAMITool {
 	private static final String FAIL = "fail";
 
@@ -131,11 +130,11 @@ public class AMIDisplayTool extends AbstractAMITool {
 
     @Override
 	protected void parseSpecifics() {
-		System.out.println("aggregate           " + summaryFilename);
-		System.out.println("assert              " + assertList);
-		System.out.println("display             " + displayList);
-		System.out.println("orientation         " + orientation);
-		System.out.println();
+    	AMIUtil.printNameValue("aggregate", summaryFilename);
+    	AMIUtil.printNameValue("assert", assertList);
+    	AMIUtil.printNameValue("display", displayList);
+    	AMIUtil.printNameValue("orientation", orientation);
+    	System.out.println();
 	}
 
 
@@ -157,7 +156,7 @@ public class AMIDisplayTool extends AbstractAMITool {
 		for (int i = 0; i < imageDirs.size(); i++) {
 			imageDir = imageDirs.get(i);
 			this.basename = FilenameUtils.getBaseName(imageDir.toString());
-			System.out.println("======>"+imageDir.getName()+"/"+inputBasename);
+			System.out.println("======>" + imageDir.getName() + "/" + getInputBasename());
 
 			if (displayList != null && displayList.size() > 0) {
 				displayFiles();
@@ -198,7 +197,7 @@ public class AMIDisplayTool extends AbstractAMITool {
 
 	private void createAndAddLinkToFile(HtmlUl ul, File summaryFile) {
 		String imageDirname = summaryFile.getParentFile().getName();
-		HtmlLi li = new HtmlLi();
+		HtmlElement li = new HtmlLi();
 		ul.appendChild(li);
 		HtmlA a = new HtmlA();
 		a.setHref(""+imageDirname+"/"+summaryFile.getName());
@@ -209,7 +208,7 @@ public class AMIDisplayTool extends AbstractAMITool {
 
 	private void displayFiles() {
 		HtmlTable table = createDisplayTable();
-		String filename = inputBasename != null ? inputBasename+"."+CTree.HTML : summaryFilename;
+		String filename = getInputBasename() != null ? getInputBasename() + "." + CTree.HTML : summaryFilename;
 		File htmlFile = new File(imageDir, filename);
 		try {
 			XMLUtil.debug(table, htmlFile, 1);
@@ -260,21 +259,21 @@ public class AMIDisplayTool extends AbstractAMITool {
 		 */
 		File displayFile = null;
 		String displayFilename = imageDir+"/"+filename;
-		if (inputBasename == null) {
+		if (getInputBasename() == null) {
 			displayFile = new File(imageDir, filename);
 		} else {
-			File subdir = new File(imageDir, inputBasename);
+			File subdir = new File(imageDir, getInputBasename());
 		    if (filename.startsWith("../")) {
 		    	filename = filename.substring(3);
 		    	displayFile = new File(imageDir, filename);
 				displayFilename = filename;
 		    } else if (filename.startsWith(".")) {
-			    	String imageFilename = inputBasename+filename;
+			    	String imageFilename = getInputBasename() + filename;
 					displayFile = new File(imageDir, imageFilename);
 					displayFilename = imageFilename;
 		    } else {
 		    	displayFile = new File(subdir, filename);
-		    	displayFilename = inputBasename + "/" + filename;
+		    	displayFilename = getInputBasename() + "/" + filename;
 		    }
 		}
 		HtmlTd td = createCell(displayFilename, displayFile);

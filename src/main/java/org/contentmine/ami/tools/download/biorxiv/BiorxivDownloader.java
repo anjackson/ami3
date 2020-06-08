@@ -1,21 +1,11 @@
 package org.contentmine.ami.tools.download.biorxiv;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import org.apache.log4j.Level;
 import org.apache.log4j.Logger;
 import org.contentmine.ami.tools.download.AbstractDownloader;
-import org.contentmine.ami.tools.download.ResultSet;
 import org.contentmine.cproject.files.CProject;
-import org.contentmine.eucl.xml.XMLUtil;
-import org.contentmine.graphics.html.HtmlBody;
-import org.contentmine.graphics.html.HtmlDiv;
-import org.contentmine.graphics.html.HtmlElement;
-import org.contentmine.graphics.html.HtmlHtml;
-import org.contentmine.graphics.html.HtmlUl;
-
-import nu.xom.Element;
 
 /** extracts from biorxiv pages
  * 
@@ -101,26 +91,24 @@ LANDING PAGE
  * @author pm286
  *
  */
-public class BiorxivDownloader extends AbstractDownloader {
+public class BiorxivDownloader extends CSHRxivDownloader {
 
-	private static final String ARTICLE = "article";
-	private static final String CONTENT = "content/";
-	private static final String HIGHWIRE_CITE_EXTRAS = "highwire-cite-extras";
-	static final String CITE_EXTRAS_DIV = ".//*[local-name()='"+HtmlDiv.TAG+"' and @class='" + HIGHWIRE_CITE_EXTRAS + "']";
+//	private static final String ARTICLE = "article";
+//	private static final String CONTENT = "content/";
+//	private static final String HIGHWIRE_CITE_EXTRAS = "highwire-cite-extras";
+//	static final String CITE_EXTRAS_DIV = ".//*[local-name()='"+HtmlDiv.TAG+"' and @class='" + HIGHWIRE_CITE_EXTRAS + "']";
 
 	static final Logger LOG = Logger.getLogger(BiorxivDownloader.class);
 	static {
 		LOG.setLevel(Level.DEBUG);
 	}
-	private static final String HIGHWIRE_SEARCH_RESULTS_LIST = "highwire-search-results-list";
+//	private static final String HIGHWIRE_SEARCH_RESULTS_LIST = "highwire-search-results-list";
 	
 	public static final String BIORXIV_HOST = "www.biorxiv.org";
 	public static final String BIORXIV_BASE = HTTPS + P2H + BIORXIV_HOST;
 	public static final String BIORXIV_SEARCH = BIORXIV_BASE + "/search/";
-	public static final String BIORXIV_HEADER = "/content/";
-
-	
 	public BiorxivDownloader() {
+		super();
 		init();
 	}
 
@@ -134,21 +122,8 @@ public class BiorxivDownloader extends AbstractDownloader {
 	}
 
 	@Override
-	protected String getResultSetXPath() {
-		return "//*[local-name()='ul' and @class='" + HIGHWIRE_SEARCH_RESULTS_LIST + "']";
-	}
-
-	
-	@Override
 	protected BiorxivMetadataEntry createSubclassedMetadataEntry() {
 		return new BiorxivMetadataEntry(this);
-	}
-
-	@Override
-	protected String getDOIFromUrl(String fullUrl) {
-		if (fullUrl == null) return null;
-		String[] parts = fullUrl.split(CONTENT);
-		return parts[1];
 	}
 
 	@Override
@@ -156,53 +131,9 @@ public class BiorxivDownloader extends AbstractDownloader {
 		return BIORXIV_SEARCH;
 	}
 
-//	@Override
-	protected void resultSetErrorMessage() {
-		System.err.println("Cannot find metadata list: "+getResultSetXPath());
-	}
-	
-	@Override
-	protected HtmlElement getArticleElement(HtmlHtml htmlHtml) {
-		return (HtmlElement) XMLUtil.getFirstElement(htmlHtml, ".//*[local-name()='"+HtmlDiv.TAG+"' and starts-with(@class, '"+ARTICLE+" "+"')]");
-	}
-	
-	@Override
-	protected HtmlElement getSearchResultsList(HtmlBody body) {
-		return (HtmlUl) XMLUtil.getFirstElement(body, getResultSetXPath());
-	}
-	
-	@Override
+@Override
 	protected String getHost() {
 		return BiorxivDownloader.BIORXIV_HOST;
-	}
-
-	@Override
-	protected String createLocalTreeName(String fileroot) {
-		return fileroot.replace("/content/", "");
-	}
-	
-	@Override
-	protected void cleanSearchResultsList(HtmlElement searchResultsList) {
-		XMLUtil.removeElementsByXPath(searchResultsList, CITE_EXTRAS_DIV);
-	}
-
-	/**
-	https://www.biorxiv.org/search/coronavirus%20numresults%3A75%20sort%3Arelevance-rank?page=1
-	 */
-	@Override
-	protected ResultSet createResultSet(Element element) {
-	//		<ul class="highwire-search-results-list">
-		List<Element> ulList = XMLUtil.getQueryElements(element, 
-				getResultSetXPath());
-		
-		if (ulList.size() == 0) {
-			LOG.debug(element.toXML());
-			System.err.println("empty array");
-			return new ResultSet();
-		}
-		Element ul = ulList.get(0);
-		ResultSet createResultSet = super.createResultSet(ul);
-		return createResultSet;
 	}
 
 

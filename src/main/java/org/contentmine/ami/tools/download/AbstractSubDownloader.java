@@ -22,14 +22,12 @@ public abstract class AbstractSubDownloader {
 		LOG.setLevel(Level.DEBUG);
 	}
 
-	public static final String RESULT_SET = "resultSet";
+	public static final String HIT_LIST = "hitList";
 	public static final String CLEAN = "clean";
 
 	protected AbstractDownloader abstractDownloader;
 	protected AMIDownloadTool downloadTool;
-//	protected CProject cProject;
-//	protected CProject currentTree;
-	protected ResultSet resultSet;
+	protected HitList hitList;
 	protected int downloadCount;
 
 
@@ -37,6 +35,9 @@ public abstract class AbstractSubDownloader {
 		super();
 		this.abstractDownloader = abstractDownloader;
 		this.downloadTool = abstractDownloader.getDownloadTool();
+		if (downloadTool == null) {
+			throw new RuntimeException("null downloadTool");
+		}
 //		this.cProject = downloadTool.getCProject();
 	}
 
@@ -50,7 +51,7 @@ public abstract class AbstractSubDownloader {
 	}
 
 
-	void replaceBodyChildrenByResultSet(HtmlBody body, HtmlElement searchResultsList) {
+	void replaceBodyChildrenByHitList(HtmlBody body, HtmlElement searchResultsList) {
 		XMLUtil.removeChildren(body);
 		body.appendChild(searchResultsList);
 	}

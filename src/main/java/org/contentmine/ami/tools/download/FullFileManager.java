@@ -25,6 +25,7 @@ public class FullFileManager extends AbstractSubDownloader {
 
 	public FullFileManager(AbstractDownloader abstractDownloader) {
 		super(abstractDownloader);
+		System.out.println("formats "+abstractDownloader.getDownloadTool().getFulltextFormats());
 	}
 	
 	/** ENTRY POINT */
@@ -57,14 +58,16 @@ public class FullFileManager extends AbstractSubDownloader {
 		if (htmlPage != null) {
 			doi = metadataEntry.getCleanedDOIFromURL();
 			abstractDownloader.currentTree = abstractDownloader.cProject.getExistingCTreeOrCreateNew(doi);
-			writeResultSetFileFOUR(htmlPage);
+			writeHitListFileFOUR(htmlPage);
 			preloadHead = htmlPage.getHead();
 			
 			writeDownloadedHtmlFile(AbstractDownloader.CITATION_ABSTRACT_HTML_URL, AbstractDownloader.ABSTRACT );
 			writeDownloadedHtmlFile(AbstractDownloader.CITATION_FULL_HTML_URL, CTree.FULLTEXT);
-			File file1 = new File(abstractDownloader.currentTree.getDirectory(), CTree.FULLTEXT + "." + CTree.PDF);
-			downloadAndWriteFile(AbstractDownloader.CITATION_PDF_URL, file1);
-			//view-source:file:///Users/pm286/workspace/cmdev/ami3/target/biorxiv/testsearch3/10_1101_2020_01_16_909614v1/resultSet.html
+			if (true /*fulltextFormats.contains*/ ) {
+				File file1 = new File(abstractDownloader.currentTree.getDirectory(), CTree.FULLTEXT + "." + CTree.PDF);
+				downloadAndWriteFile(AbstractDownloader.CITATION_PDF_URL, file1);
+			}
+			//view-source:file:///Users/pm286/workspace/cmdev/ami3/target/biorxiv/testsearch3/10_1101_2020_01_16_909614v1/hitList.html
 		}
 	}
 	
@@ -90,14 +93,14 @@ public class FullFileManager extends AbstractSubDownloader {
 		curlDownloader.run();
 	}
 
-	private void writeResultSetFileFOUR(HtmlHtml htmlPage) throws IOException {
-		File resultSetFile = new File(abstractDownloader.currentTree.getOrCreateDirectory(), AbstractSubDownloader.RESULT_SET + "." + CTree.HTML);
-		downloadTool.getResultsSetList().add(resultSetFile.toString());
+	private void writeHitListFileFOUR(HtmlHtml htmlPage) throws IOException {
+		File hitListFile = new File(abstractDownloader.currentTree.getOrCreateDirectory(), AbstractSubDownloader.HIT_LIST + "." + CTree.HTML);
+		downloadTool.getResultsSetList().add(hitListFile.toString());
 		if (htmlPage != null) {
-			if (resultSetFile.exists()) {
-				System.out.println("skipping (existing) resultSet: "+resultSetFile.getParent());
+			if (hitListFile.exists()) {
+				System.out.println("skipping (existing) hitList: "+hitListFile.getParent());
 			} else {
-				XMLUtil.writeQuietly(htmlPage, resultSetFile, 1);
+				XMLUtil.writeQuietly(htmlPage, hitListFile, 1);
 			}
 		}
 	}
